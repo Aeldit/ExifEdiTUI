@@ -1,6 +1,11 @@
 use core::fmt;
 use std::{env::args, fs};
 
+mod png;
+use png::{Ihdr, IHDR_CHUNK_SIZE};
+mod conversions;
+use conversions::*;
+
 /// Exif data of an image
 ///
 /// tag: Each tag is assigned a unique 2-byte number to identify the field. The tag numbers in the Exif 0th
@@ -69,6 +74,12 @@ impl fmt::Display for ExifData {
     }
 }
 
+#[derive(Debug)]
+enum ImagesTypes {
+    Png,
+    Jpeg,
+}
+
 fn main() {
     let args: Vec<String> = args().collect();
     if args.len() < 2 {
@@ -87,9 +98,9 @@ fn main() {
 
     let exif_chars = vec![101, 88, 73, 102]; //eXIf
     let exif_start_idx = index_of_sub_array(img_contents.clone(), exif_chars).unwrap() + 4;
-    println!("{}", *img_contents.get(exif_start_idx + 1).unwrap() as char);
+    /*println!("{}", *img_contents.get(exif_start_idx + 1).unwrap() as char);
 
-    /*println!("{}", *img_contents.get(256).unwrap());
+    println!("{}", *img_contents.get(256).unwrap());
 
     println!(
         "{}",
@@ -109,47 +120,26 @@ fn main() {
         block[12..20].as_ref(),
     );
     println!("{}", exif_data);
-}
 
-fn u8_array_to_u16(u8_array: Vec<u8>) -> Option<u16> {
-    if u8_array.len() != 2 {
-        return None;
-    }
+    // PNG
+    let png_magic = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
-    Some(((u8_array[0] as u16) << 8) | (u8_array[1] as u16))
-}
+    let image_type = if img_contents.starts_with(&png_magic) {
+        ImagesTypes::Png
+    } else {
+        ImagesTypes::Jpeg
+    };
 
-fn u8_array_to_u64(u8_array: Vec<u8>) -> Option<u64> {
-    if u8_array.len() != 8 {
-        return None;
-    }
+    println!("{:?}", image_type);
 
-    Some(
-        ((u8_array[0] as u64) << 56)
-            | ((u8_array[1] as u64) << 48)
-            | ((u8_array[2] as u64) << 40)
-            | ((u8_array[3] as u64) << 32)
-            | ((u8_array[4] as u64) << 24)
-            | ((u8_array[5] as u64) << 16)
-            | ((u8_array[6] as u64) << 8)
-            | (u8_array[7] as u64),
-    )
-}
+    let ihdr_magic = vec![0x49, 0x48, 0x44, 0x52];
+    let ihdr_chunk_start_idx = match index_of_sub_array(img_contents.clone(), ihdr_magic.clone()) {
+        Some(magic_start) => magic_start + ihdr_magic.clone().len(),
+        None => return,
+    };
 
-fn index_of_sub_array(a: Vec<u8>, sub_a: Vec<u8>) -> Option<usize> {
-    let mut i = 0;
-    let len = sub_a.len();
-    for (a_idx, b) in a.into_iter().enumerate() {
-        if b == *sub_a.get(i).unwrap() {
-            i += 1;
-        } else {
-            i = 0;
-        }
-
-        if i == len {
-            return Some(a_idx - 3);
-        }
-    }
-
-    None
+    let ihdr_chunk = Ihdr::from(
+        img_contents[ihdr_chunk_start_idx..ihdr_chunk_start_idx + IHDR_CHUNK_SIZE].as_ref(),
+    );
+    println!("{}", ihdr_chunk);
 }
