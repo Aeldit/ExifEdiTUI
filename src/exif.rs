@@ -1,10 +1,9 @@
 use core::fmt;
 
-use crate::{u8_array_to_u16, u8_array_to_u32, u8_array_to_u64};
+use crate::{u8_array_to_u16, u8_array_to_u64};
 
 // In bytes
 pub const EXIF_CHUNK_SIZE: usize = 20;
-pub const IHDR_CHUNK_SIZE: usize = 13;
 
 /// Exif data of an image
 ///
@@ -74,60 +73,6 @@ impl fmt::Display for ExifChunk {
             f,
             "EXIF {{\n\ttag: {},\n\ttype: {},\n\tcount: {},\n\tvalue_offset: {}\n}}",
             self.tag, self.data_type, self.count, self.value_offset
-        )
-    }
-}
-
-pub struct Ihdr {
-    width: u32,
-    height: u32,
-    bit_depth: u8,
-    color_type: u8,
-    compression_method: u8,
-    filter_method: u8,
-    interlace_method: u8,
-}
-
-impl Ihdr {
-    pub fn from(slice: &[u8]) -> Self {
-        if slice.len() != IHDR_CHUNK_SIZE {
-            panic!(
-                "Invalid slice size for the IHDR chunk (expected {} but got {}",
-                IHDR_CHUNK_SIZE,
-                slice.len()
-            );
-        }
-
-        Self {
-            width: match u8_array_to_u32(slice[0..4].to_vec()) {
-                Some(c) => c,
-                None => panic!("IHDR: Error in the width"),
-            },
-            height: match u8_array_to_u32(slice[4..8].to_vec()) {
-                Some(c) => c,
-                None => panic!("IHDR: Error in the height"),
-            },
-            bit_depth: slice[8],
-            color_type: slice[9],
-            compression_method: slice[10],
-            filter_method: slice[11],
-            interlace_method: slice[12],
-        }
-    }
-}
-
-impl fmt::Display for Ihdr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "IHDR {{\n\twidth: {},\n\theight: {},\n\tbit_depth: {},\n\tcolor_type: {},\n\tcompression_method: {},\n\tfilter_method: {},\n\tinterlace_method: {}\n}}",
-            self.width,
-            self.height,
-            self.bit_depth,
-            self.color_type,
-            self.compression_method,
-            self.filter_method,
-            self.interlace_method
         )
     }
 }
