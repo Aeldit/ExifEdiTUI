@@ -54,10 +54,32 @@ pub fn index_of_sub_array(a: Vec<u8>, sub_a: Vec<u8>) -> Option<usize> {
     None
 }
 
-pub fn u8_u8_to_u16_le(u: (u8, u8)) -> u16 {
+pub fn u8_2_to_u16_le(u: (u8, u8)) -> u16 {
     ((u.0 as u16) << 8) | (u.1 as u16)
 }
 
-pub fn u8_u8_to_u16_be(u: (u8, u8)) -> u16 {
+pub fn u8_2_to_u16_be(u: (u8, u8)) -> u16 {
     ((u.1 as u16) << 8) | (u.0 as u16)
+}
+
+pub fn u8_8_to_u64_le(u: (u8, u8, u8, u8, u8, u8, u8, u8)) -> u64 {
+    ((u.0 as u64) << 56)
+        | ((u.1 as u64) << 48)
+        | ((u.2 as u64) << 40)
+        | ((u.3 as u64) << 32)
+        | ((u.4 as u64) << 24)
+        | ((u.5 as u64) << 16)
+        | ((u.6 as u64) << 8)
+        | (u.7 as u64)
+}
+
+pub fn u8_8_to_u64_be(u: (u8, u8, u8, u8, u8, u8, u8, u8)) -> u64 {
+    ((u.7 as u64) << 56)
+        | ((u.6 as u64) << 48)
+        | ((u.5 as u64) << 40)
+        | ((u.4 as u64) << 32)
+        | ((u.3 as u64) << 24)
+        | ((u.2 as u64) << 16)
+        | ((u.1 as u64) << 8)
+        | (u.0 as u64)
 }

@@ -37,7 +37,7 @@ fn main() {
     );
     println!("{}", exif_chunk);
 
-    let mut next_idx = exif_chunk_start + EXIF_CHUNK_SIZE + 5;
+    let mut next_idx = exif_chunk_start + EXIF_CHUNK_SIZE + 3;
     for _ in 0..8 {
         println!(
             "{}",

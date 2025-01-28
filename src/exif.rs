@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::{u8_array_to_u64_le, u8_u8_to_u16_be, u8_u8_to_u16_le};
+use crate::{u8_2_to_u16_be, u8_2_to_u16_le, u8_8_to_u64_be, u8_8_to_u64_le};
 
 // In bytes
 pub const EXIF_CHUNK_SIZE: usize = 20;
@@ -36,8 +36,8 @@ pub const EXIF_CHUNK_SIZE: usize = 20;
 pub struct ExifChunk {
     tag: (u8, u8),
     data_type: (u8, u8),
-    count: u64,
-    value_offset: u64,
+    count: (u8, u8, u8, u8, u8, u8, u8, u8),
+    value_offset: (u8, u8, u8, u8, u8, u8, u8, u8),
 }
 
 impl ExifChunk {
@@ -45,14 +45,13 @@ impl ExifChunk {
         Self {
             tag: (slice[0], slice[1]),
             data_type: (slice[2], slice[3]),
-            count: match u8_array_to_u64_le(slice[4..12].to_vec()) {
-                Some(converted_count) => converted_count,
-                None => panic!("Invalid count"),
-            },
-            value_offset: match u8_array_to_u64_le(slice[12..20].to_vec()) {
-                Some(converted_value_offset) => converted_value_offset,
-                None => panic!("Invalid value_offset"),
-            },
+            count: (
+                slice[4], slice[5], slice[6], slice[7], slice[8], slice[9], slice[10], slice[11],
+            ),
+            value_offset: (
+                slice[12], slice[13], slice[14], slice[15], slice[16], slice[17], slice[18],
+                slice[19],
+            ),
         }
     }
 
@@ -65,17 +64,37 @@ impl fmt::Display for ExifChunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "EXIF {{\n\ttag: {} {} => BE {} | LE {},\n\ttype: {} {} => BE {} | LE {},\n\tcount: {},\n\tvalue_offset: {}\n}}",
+            "EXIF {{\n\ttag: {} {} => BE {} | LE {},\n\ttype: {} {} => BE {} | LE {},
+        count: {} {} {} {} {} {} {} {}\n\t\t=> BE {} | LE {},
+        value_offset: {} {} {} {} {} {} {} {}\n\t\t=> BE {} | LE {}\n}}",
             self.tag.0,
             self.tag.1,
-            u8_u8_to_u16_be(self.tag),
-            u8_u8_to_u16_le(self.tag),
+            u8_2_to_u16_be(self.tag),
+            u8_2_to_u16_le(self.tag),
             self.data_type.0,
             self.data_type.1,
-            u8_u8_to_u16_be(self.data_type),
-            u8_u8_to_u16_le(self.data_type),
-            self.count,
-            self.value_offset
+            u8_2_to_u16_be(self.data_type),
+            u8_2_to_u16_le(self.data_type),
+            self.count.0,
+            self.count.1,
+            self.count.2,
+            self.count.3,
+            self.count.4,
+            self.count.5,
+            self.count.6,
+            self.count.7,
+            u8_8_to_u64_be(self.count),
+            u8_8_to_u64_le(self.count),
+            self.value_offset.0,
+            self.value_offset.1,
+            self.value_offset.2,
+            self.value_offset.3,
+            self.value_offset.4,
+            self.value_offset.5,
+            self.value_offset.6,
+            self.value_offset.7,
+            u8_8_to_u64_be(self.value_offset),
+            u8_8_to_u64_le(self.value_offset),
         )
     }
 }
