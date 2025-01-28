@@ -1,4 +1,4 @@
-pub fn u8_array_to_u16(u8_array: Vec<u8>) -> Option<u16> {
+pub fn u8_array_to_u16_le(u8_array: Vec<u8>) -> Option<u16> {
     if u8_array.len() != 2 {
         return None;
     }
@@ -6,7 +6,7 @@ pub fn u8_array_to_u16(u8_array: Vec<u8>) -> Option<u16> {
     Some(((u8_array[0] as u16) << 8) | (u8_array[1] as u16))
 }
 
-pub fn u8_array_to_u32(u8_array: Vec<u8>) -> Option<u32> {
+pub fn u8_array_to_u32_le(u8_array: Vec<u8>) -> Option<u32> {
     if u8_array.len() != 4 {
         return None;
     }
@@ -19,7 +19,7 @@ pub fn u8_array_to_u32(u8_array: Vec<u8>) -> Option<u32> {
     )
 }
 
-pub fn u8_array_to_u64(u8_array: Vec<u8>) -> Option<u64> {
+pub fn u8_array_to_u64_le(u8_array: Vec<u8>) -> Option<u64> {
     if u8_array.len() != 8 {
         return None;
     }
@@ -52,4 +52,12 @@ pub fn index_of_sub_array(a: Vec<u8>, sub_a: Vec<u8>) -> Option<usize> {
     }
 
     None
+}
+
+pub fn u8_u8_to_u16_le(u: (u8, u8)) -> u16 {
+    ((u.0 as u16) << 8) | (u.1 as u16)
+}
+
+pub fn u8_u8_to_u16_be(u: (u8, u8)) -> u16 {
+    ((u.1 as u16) << 8) | (u.0 as u16)
 }

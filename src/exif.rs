@@ -1,11 +1,11 @@
 use core::fmt;
 
-use crate::{u8_array_to_u16, u8_array_to_u64};
+use crate::{u8_array_to_u64_le, u8_u8_to_u16_be, u8_u8_to_u16_le};
 
 // In bytes
 pub const EXIF_CHUNK_SIZE: usize = 20;
 
-/// Exif data of an image
+/// Exif chunk of an image
 ///
 /// tag: Each tag is assigned a unique 2-byte number to identify the field. The tag numbers in the Exif 0th
 ///      IFD and 1st IFD are all the same as the TIFF tag numbers.
@@ -34,8 +34,8 @@ pub const EXIF_CHUNK_SIZE: usize = 20;
 ///               There is no stipulation regarding the order or position of tag value (Value) recording.
 ///
 pub struct ExifChunk {
-    tag: u16,
-    data_type: u16,
+    tag: (u8, u8),
+    data_type: (u8, u8),
     count: u64,
     value_offset: u64,
 }
@@ -43,19 +43,13 @@ pub struct ExifChunk {
 impl ExifChunk {
     pub fn from(slice: &[u8]) -> Self {
         Self {
-            tag: match u8_array_to_u16(slice[0..2].to_vec()) {
-                Some(converted_tag) => converted_tag,
-                None => panic!("Invalid data tag"),
-            },
-            data_type: match u8_array_to_u16(slice[2..4].to_vec()) {
-                Some(converted_data_type) => converted_data_type,
-                None => panic!("Invalid data type"),
-            },
-            count: match u8_array_to_u64(slice[4..12].to_vec()) {
+            tag: (slice[0], slice[1]),
+            data_type: (slice[2], slice[3]),
+            count: match u8_array_to_u64_le(slice[4..12].to_vec()) {
                 Some(converted_count) => converted_count,
                 None => panic!("Invalid count"),
             },
-            value_offset: match u8_array_to_u64(slice[12..20].to_vec()) {
+            value_offset: match u8_array_to_u64_le(slice[12..20].to_vec()) {
                 Some(converted_value_offset) => converted_value_offset,
                 None => panic!("Invalid value_offset"),
             },
@@ -63,7 +57,7 @@ impl ExifChunk {
     }
 
     pub fn is_little_endian(&self) -> bool {
-        false
+        self.tag == (0x49, 0x49)
     }
 }
 
@@ -71,8 +65,17 @@ impl fmt::Display for ExifChunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "EXIF {{\n\ttag: {},\n\ttype: {},\n\tcount: {},\n\tvalue_offset: {}\n}}",
-            self.tag, self.data_type, self.count, self.value_offset
+            "EXIF {{\n\ttag: {} {} => BE {} | LE {},\n\ttype: {} {} => BE {} | LE {},\n\tcount: {},\n\tvalue_offset: {}\n}}",
+            self.tag.0,
+            self.tag.1,
+            u8_u8_to_u16_be(self.tag),
+            u8_u8_to_u16_le(self.tag),
+            self.data_type.0,
+            self.data_type.1,
+            u8_u8_to_u16_be(self.data_type),
+            u8_u8_to_u16_le(self.data_type),
+            self.count,
+            self.value_offset
         )
     }
 }
