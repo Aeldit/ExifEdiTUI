@@ -5,7 +5,7 @@ use crate::{
 };
 
 // In bytes
-pub const TIFF_HEADER_SIZE: usize = 20;
+pub const TIFF_HEADER_SIZE: usize = 8;
 pub const EXIF_CHUNK_SIZE: usize = 20;
 
 pub enum MagicBytes {
@@ -186,13 +186,14 @@ impl InteroperabilityField {
 
     pub fn get_count_as_string(&self) -> String {
         if self.is_little_endian {
+            // TODO: Use the value instead of the count
+            let count = u8_8_to_u64_le(self.count);
             match self.get_type() {
                 ExifTypes::Byte => todo!(),
                 ExifTypes::Ascii => todo!(),
                 ExifTypes::Short => todo!(),
                 ExifTypes::Long => todo!(),
                 ExifTypes::Rational => {
-                    let count = u8_8_to_u64_le(self.count);
                     let numerator = (count >> 32) as u32;
                     let denominator = count as u32;
                     format!("{} / {}", numerator, denominator)
@@ -241,7 +242,11 @@ impl fmt::Display for InteroperabilityField {
             self.count.5,
             self.count.6,
             self.count.7,
-            self.get_count_as_string(),
+            if self.is_little_endian {
+                u8_8_to_u64_le(self.count)
+            } else {
+                u8_8_to_u64_be(self.count)
+            },
             self.value_offset.0,
             self.value_offset.1,
             self.value_offset.2,
