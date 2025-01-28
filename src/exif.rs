@@ -6,6 +6,7 @@ use crate::{
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
+pub const INTEROPERABILITY_FIELD_SIZE: usize = 20;
 pub const EXIF_CHUNK_SIZE: usize = 20;
 
 pub enum MagicBytes {
@@ -114,7 +115,7 @@ impl fmt::Display for TIFFHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "TIFF {{\n\tbyte order: {} {},\n\tfixed: {} {},\n\tifd offset: {} {} {} {} => {}\n}}",
+            "TIFF {{ byte order: {} {}, fixed: {} {}, ifd offset: {} {} {} {} => {} }}",
             self.byte_order.0,
             self.byte_order.1,
             self.fixed.0,

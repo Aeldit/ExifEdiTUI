@@ -1,7 +1,10 @@
 use std::{env::args, fs};
 
 mod exif;
-use exif::{Ifd, InteroperabilityField, TIFFHeader, EXIF_CHUNK_SIZE, TIFF_HEADER_SIZE};
+use exif::{
+    Ifd, InteroperabilityField, TIFFHeader, EXIF_CHUNK_SIZE, INTEROPERABILITY_FIELD_SIZE,
+    TIFF_HEADER_SIZE,
+};
 mod conversions;
 use conversions::*;
 
@@ -50,23 +53,16 @@ fn main() {
     };
     println!("{}", ifd_0);
 
-    /*let exif_0th_ifd_start =
-        exif_chunk_start + TIFF_HEADER_SIZE + tiff_header.get_0th_idf_offset() as usize;
-    let exif_0th_idf_chunk = InteroperabilityField::from(
-        img_contents[exif_0th_ifd_start..exif_0th_ifd_start + EXIF_CHUNK_SIZE].as_ref(),
-        is_little_endian,
-    );
-    println!("{}", exif_0th_idf_chunk);*/
-
-    /*let mut next_idx = exif_chunk_start + EXIF_CHUNK_SIZE + 3;
+    let mut next_idx = ifd_0_start + INTEROPERABILITY_FIELD_SIZE;
     for i in 0..8 {
         println!(
             "{} {}",
             i,
-            ExifChunk::from(img_contents[next_idx..next_idx + EXIF_CHUNK_SIZE].as_ref())
+            InteroperabilityField::from(
+                img_contents[next_idx..next_idx + INTEROPERABILITY_FIELD_SIZE].as_ref(),
+                is_little_endian,
+            )
         );
-        next_idx += EXIF_CHUNK_SIZE + 4;
+        next_idx += INTEROPERABILITY_FIELD_SIZE;
     }
-
-    println!("{}", exif_chunk.is_little_endian());*/
 }
