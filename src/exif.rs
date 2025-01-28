@@ -1,17 +1,15 @@
 use core::fmt;
 
-use crate::{
-    u8_2_to_u16_be, u8_2_to_u16_le, u8_4_to_u32_be, u8_4_to_u32_le, u8_8_to_u64_be, u8_8_to_u64_le,
-};
+use crate::{u8_2_to_u16_be, u8_2_to_u16_le, u8_4_to_u32_be, u8_4_to_u32_le};
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
 pub const INTEROPERABILITY_FIELD_SIZE: usize = 12;
 
-pub enum MagicBytes {
+/*pub enum MagicBytes {
     Png(),
     Jpeg(),
-}
+}*/
 
 pub enum ExifTypes {
     Byte,
@@ -34,8 +32,62 @@ pub struct TIFFHeader {
 
 pub struct Ifd {
     pub number_of_fields: (u8, u8),
-    pub interoperability_arrays: InteroperabilityField,
+    pub interoperability_arrays: Vec<InteroperabilityField>, // Vec of size number_of_fields
 } // 4 byte offset to the next IFD
+
+impl Ifd {
+    pub fn from(slice: &[u8], is_little_endian: bool) -> Self {
+        if slice.len() < 2 {
+            panic!(
+                "Expected the slice length to be at least 2 for the number_of_fields, but got {}",
+                slice.len()
+            );
+        }
+
+        let number_of_fields = if is_little_endian {
+            u8_2_to_u16_le((slice[0], slice[1]))
+        } else {
+            u8_2_to_u16_be((slice[0], slice[1]))
+        };
+
+        if slice.len() < 2 + INTEROPERABILITY_FIELD_SIZE * number_of_fields as usize {
+            panic!("Expected the slice length to be at least {} with the interoperability fields, but got {}",
+                2+INTEROPERABILITY_FIELD_SIZE*number_of_fields as usize,
+                slice.len()
+            )
+        }
+
+        let mut interoperatibility_array = Vec::with_capacity(number_of_fields as usize);
+        let mut chunk_start_idx = 2;
+        for _ in 0..number_of_fields {
+            interoperatibility_array.push(InteroperabilityField::from(
+                slice[chunk_start_idx..chunk_start_idx + INTEROPERABILITY_FIELD_SIZE].as_ref(),
+                is_little_endian,
+            ));
+            chunk_start_idx += INTEROPERABILITY_FIELD_SIZE;
+        }
+
+        Self {
+            number_of_fields: (slice[0], slice[1]),
+            interoperability_arrays: interoperatibility_array,
+        }
+    }
+
+    fn get_array_as_string(&self) -> String {
+        let mut res = String::from("[\n");
+        let last = self.interoperability_arrays.len() - 1;
+        for (i, interop) in self.interoperability_arrays.iter().enumerate() {
+            if i == last {
+                res.push_str(format!("{}", interop).as_str());
+            } else {
+                res.push_str(format!("{},\n", interop).as_str());
+            }
+        }
+        res.push_str("\n\t]");
+
+        res
+    }
+}
 
 pub struct InteroperabilityField {
     tag: (u8, u8),
@@ -82,38 +134,6 @@ impl TIFFHeader {
     }
 }
 
-impl fmt::Display for TIFFHeader {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "TIFF {{ byte order: {} {}, fixed: {} {}, ifd offset: {} {} {} {} => {} }}",
-            self.byte_order.0,
-            self.byte_order.1,
-            self.fixed.0,
-            self.fixed.1,
-            self.ifd_offset.0,
-            self.ifd_offset.1,
-            self.ifd_offset.2,
-            self.ifd_offset.3,
-            if self.is_little_endian() {
-                u8_4_to_u32_le(self.ifd_offset)
-            } else {
-                u8_4_to_u32_be(self.ifd_offset)
-            },
-        )
-    }
-}
-
-impl fmt::Display for Ifd {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "IFD {{\n\tnumber of fields: {} {},\n\tinteroperability: {}\n}}",
-            self.number_of_fields.0, self.number_of_fields.1, self.interoperability_arrays,
-        )
-    }
-}
-
 impl InteroperabilityField {
     pub fn from(slice: &[u8], is_little_endian: bool) -> Self {
         if slice.len() != INTEROPERABILITY_FIELD_SIZE {
@@ -151,6 +171,20 @@ impl InteroperabilityField {
         }
     }
 
+    fn get_type_as_string(&self) -> String {
+        match self.get_type() {
+            ExifTypes::Byte => String::from("Byte"),
+            ExifTypes::Ascii => String::from("Ascii"),
+            ExifTypes::Short => String::from("Short"),
+            ExifTypes::Long => String::from("Long"),
+            ExifTypes::Rational => String::from("Rational"),
+            ExifTypes::Undefined => String::from("Undefined"),
+            ExifTypes::Slong => String::from("Slong"),
+            ExifTypes::Srational => String::from("Srational"),
+            ExifTypes::Error => String::from("Error"),
+        }
+    }
+
     pub fn get_count_as_string(&self) -> String {
         if self.is_little_endian {
             // TODO: Use the value instead of the count
@@ -176,15 +210,49 @@ impl InteroperabilityField {
     }
 }
 
+impl fmt::Display for TIFFHeader {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "TIFF {{ byte order: {} {}, fixed: {} {}, ifd offset: {} {} {} {} => {} }}",
+            self.byte_order.0,
+            self.byte_order.1,
+            self.fixed.0,
+            self.fixed.1,
+            self.ifd_offset.0,
+            self.ifd_offset.1,
+            self.ifd_offset.2,
+            self.ifd_offset.3,
+            if self.is_little_endian() {
+                u8_4_to_u32_le(self.ifd_offset)
+            } else {
+                u8_4_to_u32_be(self.ifd_offset)
+            },
+        )
+    }
+}
+
+impl fmt::Display for Ifd {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "IFD {{\n\tnumber of fields: {} {},\n\tinteroperability: {}\n}}",
+            self.number_of_fields.0,
+            self.number_of_fields.1,
+            self.get_array_as_string(),
+        )
+    }
+}
+
 impl fmt::Display for InteroperabilityField {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "({}) {{
-            tag: {} {} => {},
-            type: {} {} => {} ({}),
-            count: {} {} {} {} => {},
-            value_offset: {} {} {} {} => {}\n\t}}",
+            "\t\t({}) {{
+                    tag: {} {} => {},
+                    type: {} {} => {} ({}),
+                    count: {} {} {} {} => {},
+                    value_offset: {} {} {} {} => {}\n\t\t}}",
             if self.is_little_endian { "LE" } else { "BE" },
             self.tag.0,
             self.tag.1,
@@ -200,7 +268,7 @@ impl fmt::Display for InteroperabilityField {
             } else {
                 u8_2_to_u16_be(self.data_type)
             },
-            get_type_as_string(self.get_type()),
+            self.get_type_as_string(),
             self.count.0,
             self.count.1,
             self.count.2,
@@ -220,19 +288,5 @@ impl fmt::Display for InteroperabilityField {
                 u8_4_to_u32_be(self.value_offset)
             },
         )
-    }
-}
-
-fn get_type_as_string(exif_type: ExifTypes) -> String {
-    match exif_type {
-        ExifTypes::Byte => String::from("Byte"),
-        ExifTypes::Ascii => String::from("Ascii"),
-        ExifTypes::Short => String::from("Short"),
-        ExifTypes::Long => String::from("Long"),
-        ExifTypes::Rational => String::from("Rational"),
-        ExifTypes::Undefined => String::from("Undefined"),
-        ExifTypes::Slong => String::from("Slong"),
-        ExifTypes::Srational => String::from("Srational"),
-        ExifTypes::Error => String::from("Error"),
     }
 }
