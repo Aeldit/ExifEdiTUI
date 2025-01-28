@@ -13,6 +13,19 @@ pub enum MagicBytes {
     Jpeg(),
 }
 
+pub enum ExifTypes {
+    Byte,
+    Ascii,
+    Short,
+    Long,
+    Rational,
+    Undefined,
+    Slong,
+    Srational,
+    // Not defined by the spec
+    Error,
+}
+
 pub struct TIFFHeader {
     byte_order: (u8, u8),
     fixed: (u8, u8),
@@ -152,6 +165,47 @@ impl InteroperabilityField {
             is_little_endian,
         }
     }
+
+    pub fn get_type(&self) -> ExifTypes {
+        match if self.is_little_endian {
+            u8_2_to_u16_le(self.data_type)
+        } else {
+            u8_2_to_u16_be(self.data_type)
+        } {
+            1 => ExifTypes::Byte,
+            2 => ExifTypes::Ascii,
+            3 => ExifTypes::Short,
+            4 => ExifTypes::Long,
+            5 => ExifTypes::Rational,
+            7 => ExifTypes::Undefined,
+            9 => ExifTypes::Slong,
+            10 => ExifTypes::Srational,
+            _ => ExifTypes::Error,
+        }
+    }
+
+    pub fn get_count_as_string(&self) -> String {
+        if self.is_little_endian {
+            match self.get_type() {
+                ExifTypes::Byte => todo!(),
+                ExifTypes::Ascii => todo!(),
+                ExifTypes::Short => todo!(),
+                ExifTypes::Long => todo!(),
+                ExifTypes::Rational => {
+                    let count = u8_8_to_u64_le(self.count);
+                    let numerator = (count >> 32) as u32;
+                    let denominator = count as u32;
+                    format!("{} / {}", numerator, denominator)
+                }
+                ExifTypes::Undefined => todo!(),
+                ExifTypes::Slong => todo!(),
+                ExifTypes::Srational => todo!(),
+                ExifTypes::Error => todo!(),
+            }
+        } else {
+            String::new()
+        }
+    }
 }
 
 impl fmt::Display for InteroperabilityField {
@@ -160,7 +214,7 @@ impl fmt::Display for InteroperabilityField {
             f,
             "({}) {{
             tag: {} {} => {},
-            type: {} {} => {},
+            type: {} {} => {} ({}),
             count: {} {} {} {} {} {} {} {} => {},
             value_offset: {} {} {} {} {} {} {} {} => {}\n\t}}",
             if self.is_little_endian { "LE" } else { "BE" },
@@ -178,6 +232,7 @@ impl fmt::Display for InteroperabilityField {
             } else {
                 u8_2_to_u16_be(self.data_type)
             },
+            get_type_as_string(self.get_type()),
             self.count.0,
             self.count.1,
             self.count.2,
@@ -186,11 +241,7 @@ impl fmt::Display for InteroperabilityField {
             self.count.5,
             self.count.6,
             self.count.7,
-            if self.is_little_endian {
-                u8_8_to_u64_le(self.count)
-            } else {
-                u8_8_to_u64_be(self.count)
-            },
+            self.get_count_as_string(),
             self.value_offset.0,
             self.value_offset.1,
             self.value_offset.2,
@@ -205,5 +256,19 @@ impl fmt::Display for InteroperabilityField {
                 u8_8_to_u64_be(self.value_offset)
             },
         )
+    }
+}
+
+fn get_type_as_string(exif_type: ExifTypes) -> String {
+    match exif_type {
+        ExifTypes::Byte => String::from("Byte"),
+        ExifTypes::Ascii => String::from("Ascii"),
+        ExifTypes::Short => String::from("Short"),
+        ExifTypes::Long => String::from("Long"),
+        ExifTypes::Rational => String::from("Rational"),
+        ExifTypes::Undefined => String::from("Undefined"),
+        ExifTypes::Slong => String::from("Slong"),
+        ExifTypes::Srational => String::from("Srational"),
+        ExifTypes::Error => String::from("Error"),
     }
 }
