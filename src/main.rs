@@ -1,9 +1,14 @@
 use std::{env::args, fs};
 
-mod exif;
-use exif::{Ifd, TIFFHeader, TIFF_HEADER_SIZE};
 mod conversions;
+pub mod exif;
 use conversions::*;
+use image::{Image, ImageType};
+
+mod image;
+
+mod jpeg;
+use jpeg::Jpeg;
 
 fn main() {
     let args: Vec<String> = args().collect();
@@ -21,26 +26,26 @@ fn main() {
         Err(e) => return eprintln!("{e:?}"),
     };
 
-    //let png_exif_magic = vec![0x65, 0x58, 0x49, 0x66]; // eXIf
-    let jpg_exif_magic = vec![0x45, 0x78, 0x69, 0x66]; // Exif
-    let exif_chunk_start = match index_of_sub_array(img_contents.clone(), jpg_exif_magic.clone()) {
-        Some(magic_start) => magic_start + jpg_exif_magic.len() + 2,
-        None => return,
+    let img_type = if img_contents.starts_with(
+        vec![
+            0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+        ]
+        .as_ref(),
+    ) || img_contents.starts_with(vec![0xFF, 0xD8, 0xFF, 0xEE].as_ref())
+    {
+        ImageType::Jpeg
+    } else {
+        return;
     };
-    let tiff = TIFFHeader::from(
-        img_contents[exif_chunk_start..exif_chunk_start + TIFF_HEADER_SIZE].as_ref(),
-    );
-    println!("{}", tiff);
-    let is_little_endian = tiff.is_little_endian();
 
-    let ifd_0_start = exif_chunk_start + TIFF_HEADER_SIZE + tiff.get_0th_idf_offset() as usize;
-    let ifd_0 = Ifd::from(img_contents[ifd_0_start..].as_ref(), is_little_endian);
-
-    let idf_exif_start = match ifd_0.get_offset_for_tag(34665) {
-        Some(idf_exif_start) => exif_chunk_start + idf_exif_start,
-        None => return,
+    let img = match img_type {
+        ImageType::Jpeg => <Jpeg as Image>::from(img_contents),
     };
-    println!("{}", idf_exif_start);
-    let ifd_exif = Ifd::from(img_contents[idf_exif_start..].as_ref(), is_little_endian);
-    println!("{}", ifd_exif);
+
+    println!("{}", img.get_infos_as_string());
+
+    /*let png_exif_magic = vec![0x65, 0x58, 0x49, 0x66]; // eXIf
+        if let Some(interop) = ifd_exif.get_interop_for_tag(40961) {
+        //println!("{}", interop.get_value())
+    };*/
 }

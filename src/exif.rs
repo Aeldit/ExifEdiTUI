@@ -64,6 +64,29 @@ impl TIFFHeader {
             off
         }
     }
+
+    pub fn get_as_string(&self) -> String {
+        format!(
+            "TIFF {{ Byte Order: {}, 0th IFD offset: {} }}",
+            if self.is_little_endian() {
+                "Little endian (II)"
+            } else {
+                "Big endian (MM)"
+            },
+            {
+                let off = if self.is_little_endian() {
+                    u8_4_to_u32_le(self.ifd_offset)
+                } else {
+                    u8_4_to_u32_be(self.ifd_offset)
+                };
+                if off == 8 {
+                    0
+                } else {
+                    off
+                }
+            }
+        )
+    }
 }
 
 pub struct Ifd {
@@ -137,12 +160,28 @@ impl Ifd {
     }
 
     pub fn get_offset_for_tag(&self, tag: usize) -> Option<usize> {
-        for interop in &self.interoperability_arrays {
-            if interop.get_tag() == tag {
-                return Some(interop.get_value_offset());
-            }
-        }
-        None
+        self.interoperability_arrays
+            .iter()
+            .find(|interop| interop.get_tag() == tag)
+            .map(|interop| interop.get_value_offset())
+    }
+
+    pub fn get_interop_for_tag(&self, tag: usize) -> Option<&InteroperabilityField> {
+        self.interoperability_arrays
+            .iter()
+            .find(|interop| interop.get_tag() == tag)
+    }
+
+    pub fn get_as_string(&self) -> String {
+        format!(
+            "IFD {{\n\tNumber of fields: {},\n\tinteroperability: {}\n}}",
+            if self.is_little_endian {
+                u8_2_to_u16_le(self.number_of_fields)
+            } else {
+                u8_2_to_u16_be(self.number_of_fields)
+            },
+            self.get_array_as_string(),
+        )
     }
 }
 
@@ -182,15 +221,7 @@ impl InteroperabilityField {
         }
     }
 
-    pub fn get_value_offset(&self) -> usize {
-        if self.is_little_endian {
-            u8_4_to_u32_le(self.value_offset) as usize
-        } else {
-            u8_4_to_u32_be(self.value_offset) as usize
-        }
-    }
-
-    pub fn get_type(&self) -> ExifTypes {
+    pub fn get_data_type(&self) -> ExifTypes {
         match if self.is_little_endian {
             u8_2_to_u16_le(self.data_type)
         } else {
@@ -208,8 +239,20 @@ impl InteroperabilityField {
         }
     }
 
+    pub fn get_value_offset(&self) -> usize {
+        if self.is_little_endian {
+            u8_4_to_u32_le(self.value_offset) as usize
+        } else {
+            u8_4_to_u32_be(self.value_offset) as usize
+        }
+    }
+
+    pub fn get_value(&self) -> Vec<u8> {
+        Vec::new()
+    }
+
     fn get_type_as_string(&self) -> String {
-        match self.get_type() {
+        match self.get_data_type() {
             ExifTypes::Byte => String::from("Byte"),
             ExifTypes::Ascii => String::from("Ascii"),
             ExifTypes::Short => String::from("Short"),
@@ -226,7 +269,7 @@ impl InteroperabilityField {
         if self.is_little_endian {
             // TODO: Use the value instead of the count
             let count = u8_4_to_u32_le(self.count);
-            match self.get_type() {
+            match self.get_data_type() {
                 ExifTypes::Byte => todo!(),
                 ExifTypes::Ascii => todo!(),
                 ExifTypes::Short => todo!(),
@@ -249,42 +292,13 @@ impl InteroperabilityField {
 
 impl fmt::Display for TIFFHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "TIFF {{ Byte Order: {}, 0th IFD offset: {} }}",
-            if self.is_little_endian() {
-                "Little endian (II)"
-            } else {
-                "Big endian (MM)"
-            },
-            {
-                let off = if self.is_little_endian() {
-                    u8_4_to_u32_le(self.ifd_offset)
-                } else {
-                    u8_4_to_u32_be(self.ifd_offset)
-                };
-                if off == 8 {
-                    0
-                } else {
-                    off
-                }
-            }
-        )
+        write!(f, "{}", self.get_as_string())
     }
 }
 
 impl fmt::Display for Ifd {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "IFD {{\n\tNumber of fields: {},\n\tinteroperability: {}\n}}",
-            if self.is_little_endian {
-                u8_2_to_u16_le(self.number_of_fields)
-            } else {
-                u8_2_to_u16_be(self.number_of_fields)
-            },
-            self.get_array_as_string(),
-        )
+        write!(f, "{}", self.get_as_string())
     }
 }
 
