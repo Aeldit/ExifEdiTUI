@@ -11,6 +11,7 @@ pub const INTEROPERABILITY_FIELD_SIZE: usize = 12;
     Jpeg(),
 }*/
 
+#[derive(PartialEq)]
 pub enum ExifTypes {
     Byte,
     Ascii,
@@ -89,14 +90,14 @@ impl TIFFHeader {
     }
 }
 
-pub struct Ifd {
+pub struct IFD {
     pub number_of_fields: (u8, u8),
     pub interoperability_arrays: Vec<InteroperabilityField>, // Vec of size number_of_fields
     // Not in the spec
     is_little_endian: bool,
 } // 4 byte offset to the next IFD
 
-impl Ifd {
+impl IFD {
     pub fn from(slice: &[u8], is_little_endian: bool) -> Self {
         if slice.len() < 2 {
             panic!(
@@ -247,8 +248,62 @@ impl InteroperabilityField {
         }
     }
 
-    pub fn get_value(&self) -> Vec<u8> {
-        Vec::new()
+    pub fn get_value_byte(&self) -> Option<u8> {
+        if self.get_data_type() == ExifTypes::Byte {
+            return Some(self.value_offset.0);
+        }
+        None
+    }
+
+    pub fn get_value_ascii(&self) -> Option<u16> {
+        todo!();
+    }
+
+    pub fn get_value_short(&self) -> Option<u16> {
+        if self.get_data_type() == ExifTypes::Short {
+            return Some(u8_4_to_u32_le(self.value_offset) as u16);
+        }
+        None
+    }
+
+    pub fn get_value_long(&self) -> Option<u32> {
+        if self.get_data_type() == ExifTypes::Long {
+            return Some(u8_4_to_u32_le(self.value_offset));
+        }
+        None
+    }
+
+    pub fn get_value_rational(&self) -> Option<(u32, u32)> {
+        if self.get_data_type() == ExifTypes::Rational {
+            todo!()
+        }
+        None
+    }
+
+    pub fn get_value_undefined(&self) -> Option<u8> {
+        if self.get_data_type() == ExifTypes::Undefined {
+            return Some(self.value_offset.0);
+        }
+        None
+    }
+
+    pub fn get_value_slong(&self) -> Option<i32> {
+        if self.get_data_type() == ExifTypes::Slong {
+            return Some(
+                (self.value_offset.0 as i32) << 24
+                    | (self.value_offset.1 as i32) << 16
+                    | (self.value_offset.2 as i32) << 8
+                    | self.value_offset.3 as i32,
+            );
+        }
+        None
+    }
+
+    pub fn get_value_srational(&self) -> Option<u8> {
+        if self.get_data_type() == ExifTypes::Byte {
+            todo!()
+        }
+        None
     }
 
     fn get_type_as_string(&self) -> String {
@@ -296,7 +351,7 @@ impl fmt::Display for TIFFHeader {
     }
 }
 
-impl fmt::Display for Ifd {
+impl fmt::Display for IFD {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.get_as_string())
     }

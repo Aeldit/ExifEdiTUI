@@ -1,13 +1,13 @@
 use crate::{
     conversions::index_of_sub_array,
-    exif::{Ifd, TIFFHeader, TIFF_HEADER_SIZE},
+    exif::{TIFFHeader, IFD, TIFF_HEADER_SIZE},
     image::Image,
 };
 
 pub struct Jpeg {
     tiff: TIFFHeader,
-    ifd_0: Ifd,
-    ifd_exif: Ifd,
+    ifd_0: IFD,
+    ifd_exif: IFD,
 }
 
 impl Image for Jpeg {
@@ -21,19 +21,17 @@ impl Image for Jpeg {
         let tiff = TIFFHeader::from(
             img_contents[exif_chunk_start..exif_chunk_start + TIFF_HEADER_SIZE].as_ref(),
         );
-        println!("{}", tiff);
         let is_little_endian = tiff.is_little_endian();
 
         let ifd_0_start = exif_chunk_start + TIFF_HEADER_SIZE + tiff.get_0th_idf_offset() as usize;
-        let ifd_0 = Ifd::from(img_contents[ifd_0_start..].as_ref(), is_little_endian);
-        println!("{}", ifd_0);
+        let ifd_0 = IFD::from(img_contents[ifd_0_start..].as_ref(), is_little_endian);
 
         let idf_exif_start = match ifd_0.get_offset_for_tag(34665) {
             Some(idf_exif_start) => exif_chunk_start + idf_exif_start,
             None => panic!(""),
         };
-        let ifd_exif = Ifd::from(img_contents[idf_exif_start..].as_ref(), is_little_endian);
-        println!("{}", ifd_exif);
+        let ifd_exif = IFD::from(img_contents[idf_exif_start..].as_ref(), is_little_endian);
+
         Self {
             tiff,
             ifd_0,
