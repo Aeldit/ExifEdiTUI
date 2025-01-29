@@ -5,12 +5,6 @@ use exif::{Ifd, TIFFHeader, TIFF_HEADER_SIZE};
 mod conversions;
 use conversions::*;
 
-/*#[derive(Debug)]
-enum ImagesTypes {
-    Png,
-    Jpeg,
-}*/
-
 fn main() {
     let args: Vec<String> = args().collect();
     if args.len() < 2 {
@@ -41,5 +35,12 @@ fn main() {
 
     let ifd_0_start = exif_chunk_start + TIFF_HEADER_SIZE + tiff.get_0th_idf_offset() as usize;
     let ifd_0 = Ifd::from(img_contents[ifd_0_start..].as_ref(), is_little_endian);
-    println!("{}", ifd_0);
+
+    let idf_exif_start = match ifd_0.get_offset_for_tag(34665) {
+        Some(idf_exif_start) => exif_chunk_start + idf_exif_start,
+        None => return,
+    };
+    println!("{}", idf_exif_start);
+    let ifd_exif = Ifd::from(img_contents[idf_exif_start..].as_ref(), is_little_endian);
+    println!("{}", ifd_exif);
 }

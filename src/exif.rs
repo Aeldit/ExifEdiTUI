@@ -30,74 +30,6 @@ pub struct TIFFHeader {
     ifd_offset: (u8, u8, u8, u8), // If = 8 => followed directly by the 0th IFD
 }
 
-pub struct Ifd {
-    pub number_of_fields: (u8, u8),
-    pub interoperability_arrays: Vec<InteroperabilityField>, // Vec of size number_of_fields
-} // 4 byte offset to the next IFD
-
-impl Ifd {
-    pub fn from(slice: &[u8], is_little_endian: bool) -> Self {
-        if slice.len() < 2 {
-            panic!(
-                "Expected the slice length to be at least 2 for the number_of_fields, but got {}",
-                slice.len()
-            );
-        }
-
-        let number_of_fields = if is_little_endian {
-            u8_2_to_u16_le((slice[0], slice[1]))
-        } else {
-            u8_2_to_u16_be((slice[0], slice[1]))
-        };
-
-        if slice.len() < 2 + INTEROPERABILITY_FIELD_SIZE * number_of_fields as usize {
-            panic!("Expected the slice length to be at least {} with the interoperability fields, but got {}",
-                2+INTEROPERABILITY_FIELD_SIZE*number_of_fields as usize,
-                slice.len()
-            )
-        }
-
-        let mut interoperatibility_array = Vec::with_capacity(number_of_fields as usize);
-        let mut chunk_start_idx = 2;
-        for _ in 0..number_of_fields {
-            interoperatibility_array.push(InteroperabilityField::from(
-                slice[chunk_start_idx..chunk_start_idx + INTEROPERABILITY_FIELD_SIZE].as_ref(),
-                is_little_endian,
-            ));
-            chunk_start_idx += INTEROPERABILITY_FIELD_SIZE;
-        }
-
-        Self {
-            number_of_fields: (slice[0], slice[1]),
-            interoperability_arrays: interoperatibility_array,
-        }
-    }
-
-    fn get_array_as_string(&self) -> String {
-        let mut res = String::from("[\n");
-        let last = self.interoperability_arrays.len() - 1;
-        for (i, interop) in self.interoperability_arrays.iter().enumerate() {
-            if i == last {
-                res.push_str(format!("{}", interop).as_str());
-            } else {
-                res.push_str(format!("{},\n", interop).as_str());
-            }
-        }
-        res.push_str("\n\t]");
-
-        res
-    }
-}
-
-pub struct InteroperabilityField {
-    tag: (u8, u8),
-    data_type: (u8, u8),
-    count: (u8, u8, u8, u8),
-    value_offset: (u8, u8, u8, u8),
-    // Not in the chunk
-    is_little_endian: bool,
-}
-
 impl TIFFHeader {
     pub fn from(slice: &[u8]) -> Self {
         if slice.len() != TIFF_HEADER_SIZE {
@@ -134,6 +66,95 @@ impl TIFFHeader {
     }
 }
 
+pub struct Ifd {
+    pub number_of_fields: (u8, u8),
+    pub interoperability_arrays: Vec<InteroperabilityField>, // Vec of size number_of_fields
+    // Not in teh spec
+    is_little_endian: bool,
+} // 4 byte offset to the next IFD
+
+impl Ifd {
+    pub fn from(slice: &[u8], is_little_endian: bool) -> Self {
+        if slice.len() < 2 {
+            panic!(
+                "Expected the slice length to be at least 2 for the number_of_fields, but got {}",
+                slice.len()
+            );
+        }
+
+        let number_of_fields = if is_little_endian {
+            u8_2_to_u16_le((slice[0], slice[1]))
+        } else {
+            u8_2_to_u16_be((slice[0], slice[1]))
+        };
+
+        if slice.len() < 2 + INTEROPERABILITY_FIELD_SIZE * number_of_fields as usize {
+            panic!("Expected the slice length to be at least {} with the interoperability fields, but got {}",
+                2 + INTEROPERABILITY_FIELD_SIZE * number_of_fields as usize,
+                slice.len()
+            )
+        }
+
+        let mut interoperatibility_array = Vec::with_capacity(number_of_fields as usize);
+        let mut chunk_start_idx = 2;
+        for _ in 0..number_of_fields {
+            interoperatibility_array.push(InteroperabilityField::from(
+                slice[chunk_start_idx..chunk_start_idx + INTEROPERABILITY_FIELD_SIZE].as_ref(),
+                is_little_endian,
+            ));
+            chunk_start_idx += INTEROPERABILITY_FIELD_SIZE;
+        }
+
+        Self {
+            number_of_fields: (slice[0], slice[1]),
+            interoperability_arrays: interoperatibility_array,
+            is_little_endian,
+        }
+    }
+
+    fn get_array_as_string(&self) -> String {
+        let mut res = String::from("[\n");
+        let last = self.interoperability_arrays.len() - 1;
+        for (i, interop) in self.interoperability_arrays.iter().enumerate() {
+            if i == last {
+                res.push_str(format!("{}", interop).as_str());
+            } else {
+                res.push_str(format!("{},\n", interop).as_str());
+            }
+        }
+        res.push_str("\n\t]");
+
+        res
+    }
+
+    pub fn get_offset_to_next_ifd(&self) -> usize {
+        2 + if self.is_little_endian {
+            u8_2_to_u16_le(self.number_of_fields) as usize
+        } else {
+            u8_2_to_u16_be(self.number_of_fields) as usize
+        } * INTEROPERABILITY_FIELD_SIZE
+            + 4
+    }
+
+    pub fn get_offset_for_tag(&self, tag: usize) -> Option<usize> {
+        for interop in &self.interoperability_arrays {
+            if interop.get_tag() == tag {
+                return Some(interop.get_value_offset());
+            }
+        }
+        None
+    }
+}
+
+pub struct InteroperabilityField {
+    tag: (u8, u8),
+    data_type: (u8, u8),
+    count: (u8, u8, u8, u8),
+    value_offset: (u8, u8, u8, u8),
+    // Not defined by the spec
+    is_little_endian: bool,
+}
+
 impl InteroperabilityField {
     pub fn from(slice: &[u8], is_little_endian: bool) -> Self {
         if slice.len() != INTEROPERABILITY_FIELD_SIZE {
@@ -150,6 +171,22 @@ impl InteroperabilityField {
             count: (slice[4], slice[5], slice[6], slice[7]),
             value_offset: (slice[8], slice[9], slice[10], slice[11]),
             is_little_endian,
+        }
+    }
+
+    pub fn get_tag(&self) -> usize {
+        if self.is_little_endian {
+            u8_2_to_u16_le(self.tag) as usize
+        } else {
+            u8_2_to_u16_be(self.tag) as usize
+        }
+    }
+
+    pub fn get_value_offset(&self) -> usize {
+        if self.is_little_endian {
+            u8_4_to_u32_le(self.value_offset) as usize
+        } else {
+            u8_4_to_u32_be(self.value_offset) as usize
         }
     }
 
@@ -214,20 +251,24 @@ impl fmt::Display for TIFFHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "TIFF {{ byte order: {} {}, fixed: {} {}, ifd offset: {} {} {} {} => {} }}",
-            self.byte_order.0,
-            self.byte_order.1,
-            self.fixed.0,
-            self.fixed.1,
-            self.ifd_offset.0,
-            self.ifd_offset.1,
-            self.ifd_offset.2,
-            self.ifd_offset.3,
+            "TIFF {{ Byte Order: {}, 0th IFD offset: {} }}",
             if self.is_little_endian() {
-                u8_4_to_u32_le(self.ifd_offset)
+                "Little endian (II)"
             } else {
-                u8_4_to_u32_be(self.ifd_offset)
+                "Big endian (MM)"
             },
+            {
+                let off = if self.is_little_endian() {
+                    u8_4_to_u32_le(self.ifd_offset)
+                } else {
+                    u8_4_to_u32_be(self.ifd_offset)
+                };
+                if off == 8 {
+                    0
+                } else {
+                    off
+                }
+            }
         )
     }
 }
@@ -236,9 +277,12 @@ impl fmt::Display for Ifd {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "IFD {{\n\tnumber of fields: {} {},\n\tinteroperability: {}\n}}",
-            self.number_of_fields.0,
-            self.number_of_fields.1,
+            "IFD {{\n\tNumber of fields: {},\n\tinteroperability: {}\n}}",
+            if self.is_little_endian {
+                u8_2_to_u16_le(self.number_of_fields)
+            } else {
+                u8_2_to_u16_be(self.number_of_fields)
+            },
             self.get_array_as_string(),
         )
     }
@@ -248,12 +292,11 @@ impl fmt::Display for InteroperabilityField {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\t\t({}) {{
+            "\t\t{{
                     tag: {} {} => {},
                     type: {} {} => {} ({}),
                     count: {} {} {} {} => {},
                     value_offset: {} {} {} {} => {}\n\t\t}}",
-            if self.is_little_endian { "LE" } else { "BE" },
             self.tag.0,
             self.tag.1,
             if self.is_little_endian {
