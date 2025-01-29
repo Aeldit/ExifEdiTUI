@@ -26,7 +26,8 @@ pub enum ExifTypes {
 
 pub struct TIFFHeader {
     byte_order: (u8, u8),
-    fixed: (u8, u8),
+    // Not used but in the spec
+    // fixed: (u8, u8),
     ifd_offset: (u8, u8, u8, u8), // If = 8 => followed directly by the 0th IFD
 }
 
@@ -42,7 +43,6 @@ impl TIFFHeader {
 
         Self {
             byte_order: (slice[0], slice[1]),
-            fixed: (slice[2], slice[3]),
             ifd_offset: (slice[4], slice[5], slice[6], slice[7]),
         }
     }
@@ -92,7 +92,7 @@ impl TIFFHeader {
 pub struct Ifd {
     pub number_of_fields: (u8, u8),
     pub interoperability_arrays: Vec<InteroperabilityField>, // Vec of size number_of_fields
-    // Not in teh spec
+    // Not in the spec
     is_little_endian: bool,
 } // 4 byte offset to the next IFD
 
