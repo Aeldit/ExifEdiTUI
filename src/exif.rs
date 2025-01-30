@@ -184,6 +184,17 @@ impl IFD {
             self.get_array_as_string(),
         )
     }
+
+    pub fn get_value_as_string_for_tag(&self, tag: usize, slice: &[u8]) -> String {
+        match self
+            .interoperability_arrays
+            .iter()
+            .find(|interop| interop.get_tag() == tag)
+        {
+            Some(interop) => interop.get_value_as_string(slice),
+            None => String::from("Error"),
+        }
+    }
 }
 
 pub struct InteroperabilityField {
@@ -250,58 +261,56 @@ impl InteroperabilityField {
 
     pub fn get_value_byte(&self) -> Option<u8> {
         if self.get_data_type() == ExifTypes::Byte {
-            return Some(self.value_offset.0);
+            return Some(self.get_byte());
         }
         None
     }
 
-    pub fn get_value_ascii(&self) -> Option<u16> {
-        todo!();
+    pub fn get_value_ascii(&self, slice: &[u8]) -> Option<String> {
+        if self.get_data_type() == ExifTypes::Ascii {
+            return Some(self.get_ascii(slice));
+        }
+        None
     }
 
     pub fn get_value_short(&self) -> Option<u16> {
         if self.get_data_type() == ExifTypes::Short {
-            return Some(u8_4_to_u32_le(self.value_offset) as u16);
+            return Some(self.get_short());
         }
         None
     }
 
     pub fn get_value_long(&self) -> Option<u32> {
         if self.get_data_type() == ExifTypes::Long {
-            return Some(u8_4_to_u32_le(self.value_offset));
+            return Some(self.get_long());
         }
         None
     }
 
-    pub fn get_value_rational(&self) -> Option<(u32, u32)> {
+    pub fn get_value_rational(&self, slice: &[u8]) -> Option<(u32, u32)> {
         if self.get_data_type() == ExifTypes::Rational {
-            todo!()
+            return Some(self.get_rational(slice));
         }
         None
     }
 
     pub fn get_value_undefined(&self) -> Option<u8> {
         if self.get_data_type() == ExifTypes::Undefined {
-            return Some(self.value_offset.0);
+            return Some(self.get_undefined());
         }
         None
     }
 
     pub fn get_value_slong(&self) -> Option<i32> {
         if self.get_data_type() == ExifTypes::Slong {
-            return Some(
-                (self.value_offset.0 as i32) << 24
-                    | (self.value_offset.1 as i32) << 16
-                    | (self.value_offset.2 as i32) << 8
-                    | self.value_offset.3 as i32,
-            );
+            return Some(self.get_slong());
         }
         None
     }
 
-    pub fn get_value_srational(&self) -> Option<u8> {
+    pub fn get_value_srational(&self, slice: &[u8]) -> Option<u8> {
         if self.get_data_type() == ExifTypes::Byte {
-            todo!()
+            return Some(self.get_srational(slice));
         }
         None
     }
@@ -320,28 +329,72 @@ impl InteroperabilityField {
         }
     }
 
-    pub fn get_count_as_string(&self) -> String {
+    pub fn get_count(&self) -> usize {
         if self.is_little_endian {
-            // TODO: Use the value instead of the count
-            let count = u8_4_to_u32_le(self.count);
-            match self.get_data_type() {
-                ExifTypes::Byte => todo!(),
-                ExifTypes::Ascii => todo!(),
-                ExifTypes::Short => todo!(),
-                ExifTypes::Long => todo!(),
-                ExifTypes::Rational => {
-                    let numerator = (count >> 16) as u16;
-                    let denominator = count as u16;
-                    format!("{} / {}", numerator, denominator)
-                }
-                ExifTypes::Undefined => todo!(),
-                ExifTypes::Slong => todo!(),
-                ExifTypes::Srational => todo!(),
-                ExifTypes::Error => todo!(),
-            }
+            u8_4_to_u32_le(self.count) as usize
         } else {
-            String::new()
+            u8_4_to_u32_be(self.count) as usize
         }
+    }
+
+    pub fn get_value_as_string(&self, slice: &[u8]) -> String {
+        match self.get_data_type() {
+            ExifTypes::Byte => format!("{}", self.get_byte()),
+            ExifTypes::Ascii => self.get_ascii(slice),
+            ExifTypes::Short => format!("{}", self.get_short()),
+            ExifTypes::Long => format!("{}", self.get_long()),
+            ExifTypes::Rational => format!("{}", self.get_long()),
+            ExifTypes::Undefined => format!("{}", self.get_long()),
+            ExifTypes::Slong => format!("{}", self.get_slong()),
+            ExifTypes::Srational => format!("{}", self.get_srational(slice)),
+            ExifTypes::Error => String::from("Error"),
+        }
+    }
+
+    fn get_byte(&self) -> u8 {
+        self.value_offset.0
+    }
+
+    fn get_ascii(&self, slice: &[u8]) -> String {
+        let mut res = String::new();
+        let mut i = 0;
+        for s in slice[self.get_value_offset()..].iter() {
+            res.push_str(format!("{}", *s as char).as_str());
+            i += 1;
+
+            if i == self.get_count() {
+                break;
+            }
+        }
+
+        res
+    }
+
+    fn get_short(&self) -> u16 {
+        u8_4_to_u32_le(self.value_offset) as u16
+    }
+
+    fn get_long(&self) -> u32 {
+        u8_4_to_u32_le(self.value_offset)
+    }
+
+    fn get_rational(&self, slice: &[u8]) -> (u32, u32) {
+        todo!()
+    }
+
+    fn get_undefined(&self) -> u8 {
+        self.value_offset.0
+    }
+
+    fn get_slong(&self) -> i32 {
+        (self.value_offset.0 as i32) << 24
+            | (self.value_offset.1 as i32) << 16
+            | (self.value_offset.2 as i32) << 8
+            | self.value_offset.3 as i32
+    }
+
+    fn get_srational(&self, slice: &[u8]) -> u8 {
+        todo!()
     }
 }
 

@@ -2,6 +2,7 @@ use std::{env::args, fs};
 
 mod conversions;
 pub mod exif;
+pub mod tags;
 use conversions::*;
 use image::{Image, ImageType};
 
@@ -42,7 +43,7 @@ fn main() {
         ImageType::Jpeg => <Jpeg as Image>::from(img_contents),
     };
 
-    println!("{}", img.get_infos_as_string());
+    //println!("{}", img.get_infos_as_string());
 
     /*let png_exif_magic = vec![0x65, 0x58, 0x49, 0x66]; // eXIf
         if let Some(interop) = ifd_exif.get_interop_for_tag(40961) {

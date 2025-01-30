@@ -2,6 +2,7 @@ use crate::{
     conversions::index_of_sub_array,
     exif::{TIFFHeader, IFD, TIFF_HEADER_SIZE},
     image::Image,
+    tags::{get_usize_for_tag, Tags},
 };
 
 pub struct Jpeg {
@@ -25,12 +26,28 @@ impl Image for Jpeg {
 
         let ifd_0_start = exif_chunk_start + TIFF_HEADER_SIZE + tiff.get_0th_idf_offset() as usize;
         let ifd_0 = IFD::from(img_contents[ifd_0_start..].as_ref(), is_little_endian);
+        println!("{}", ifd_0);
+        println!(
+            "{:?}: {}",
+            Tags::DateTime,
+            ifd_0.get_value_as_string_for_tag(
+                get_usize_for_tag(Tags::DateTime),
+                img_contents[exif_chunk_start..].as_ref()
+            )
+        );
 
         let idf_exif_start = match ifd_0.get_offset_for_tag(34665) {
             Some(idf_exif_start) => exif_chunk_start + idf_exif_start,
             None => panic!(""),
         };
         let ifd_exif = IFD::from(img_contents[idf_exif_start..].as_ref(), is_little_endian);
+        println!(
+            "{}",
+            ifd_exif
+                .get_interop_for_tag(40961)
+                .unwrap()
+                .get_value_as_string(img_contents[exif_chunk_start..].as_ref())
+        );
 
         Self {
             tiff,
