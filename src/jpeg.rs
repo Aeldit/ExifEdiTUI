@@ -26,12 +26,27 @@ impl Image for Jpeg {
 
         let ifd_0_start = exif_chunk_start + TIFF_HEADER_SIZE + tiff.get_0th_idf_offset() as usize;
         let ifd_0 = IFD::from(img_contents[ifd_0_start..].as_ref(), is_little_endian);
-        println!("{}", ifd_0);
         println!(
             "{:?}: {}",
             Tags::DateTime,
             ifd_0.get_value_as_string_for_tag(
                 get_usize_for_tag(Tags::DateTime),
+                img_contents[exif_chunk_start..].as_ref()
+            )
+        );
+        println!(
+            "{:?}: {}",
+            Tags::Software,
+            ifd_0.get_value_as_string_for_tag(
+                get_usize_for_tag(Tags::Software),
+                img_contents[exif_chunk_start..].as_ref()
+            )
+        );
+        println!(
+            "{:?}: {}",
+            Tags::Copyright,
+            ifd_0.get_value_as_string_for_tag(
+                get_usize_for_tag(Tags::Copyright),
                 img_contents[exif_chunk_start..].as_ref()
             )
         );
@@ -58,10 +73,10 @@ impl Image for Jpeg {
 
     fn get_infos_as_string(&self) -> String {
         format!(
-            "{}\n{}\n{}",
+            "{}\n{}\n",
             self.tiff.get_as_string(),
             self.ifd_0.get_as_string(),
-            self.ifd_exif.get_as_string(),
+            //self.ifd_exif.get_as_string(),
         )
     }
 }

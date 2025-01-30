@@ -347,7 +347,7 @@ impl InteroperabilityField {
             ExifTypes::Undefined => format!("{}", self.get_long()),
             ExifTypes::Slong => format!("{}", self.get_slong()),
             ExifTypes::Srational => format!("{}", self.get_srational(slice)),
-            ExifTypes::Error => String::from("Error"),
+            ExifTypes::Error => String::from("N/A"),
         }
     }
 

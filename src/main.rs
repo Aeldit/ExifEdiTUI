@@ -33,9 +33,15 @@ fn main() {
         ]
         .as_ref(),
     ) || img_contents.starts_with(vec![0xFF, 0xD8, 0xFF, 0xEE].as_ref())
-    {
+        || img_contents.starts_with(
+            vec![
+                0xFF, 0xD8, 0xFF, 0xE1, 0x00, 0x3F, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+            ]
+            .as_ref(),
+        ) {
         ImageType::Jpeg
     } else {
+        println!("AA");
         return;
     };
 
@@ -43,7 +49,7 @@ fn main() {
         ImageType::Jpeg => <Jpeg as Image>::from(img_contents),
     };
 
-    //println!("{}", img.get_infos_as_string());
+    println!("{}", img.get_infos_as_string());
 
     /*let png_exif_magic = vec![0x65, 0x58, 0x49, 0x66]; // eXIf
         if let Some(interop) = ifd_exif.get_interop_for_tag(40961) {
