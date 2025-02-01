@@ -4,55 +4,35 @@ mod conversions;
 pub mod exif;
 pub mod tags;
 use conversions::*;
-use image::{Image, ImageType};
+use image::{get_image_type_for, Image, ImageType};
 
 mod image;
 
 mod jpeg;
 use jpeg::Jpeg;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = args().collect();
     if args.len() < 2 {
-        return;
+        return Ok(());
     }
 
     let img_path = match args.get(1) {
         Some(img_path) => img_path,
-        None => return,
+        None => return Ok(()),
     };
 
-    let img_contents = match fs::read(img_path) {
-        Ok(img_contents) => img_contents,
-        Err(e) => return eprintln!("{e:?}"),
-    };
+    let img_contents = fs::read(img_path)?;
 
-    let img_type = if img_contents.starts_with(
-        vec![
-            0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
-        ]
-        .as_ref(),
-    ) || img_contents.starts_with(vec![0xFF, 0xD8, 0xFF, 0xEE].as_ref())
-        || img_contents.starts_with(
-            vec![
-                0xFF, 0xD8, 0xFF, 0xE1, 0x00, 0x3F, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
-            ]
-            .as_ref(),
-        ) {
-        ImageType::Jpeg
-    } else {
-        println!("AA");
-        return;
+    let img_type = match get_image_type_for(img_contents.as_ref()) {
+        Some(img_type) => img_type,
+        None => return Ok(()),
     };
 
     let img = match img_type {
         ImageType::Jpeg => <Jpeg as Image>::from(img_contents),
     };
+    img.print_all_tags();
 
-    println!("{}", img.get_infos_as_string());
-
-    /*let png_exif_magic = vec![0x65, 0x58, 0x49, 0x66]; // eXIf
-        if let Some(interop) = ifd_exif.get_interop_for_tag(40961) {
-        //println!("{}", interop.get_value())
-    };*/
+    Ok(())
 }

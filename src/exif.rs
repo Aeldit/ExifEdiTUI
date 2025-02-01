@@ -1,6 +1,9 @@
 use core::fmt;
 
-use crate::{u8_2_to_u16_be, u8_2_to_u16_le, u8_4_to_u32_be, u8_4_to_u32_le};
+use crate::{
+    tags::{get_tag_for_usize, Tags},
+    u8_2_to_u16_be, u8_2_to_u16_le, u8_4_to_u32_be, u8_4_to_u32_le,
+};
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
@@ -195,6 +198,12 @@ impl IFD {
             None => String::from("Error"),
         }
     }
+
+    pub fn print_all_tags(&self, slice: &[u8]) {
+        for interop in &self.interoperability_arrays {
+            println!("{}", interop.get_value_as_string(slice))
+        }
+    }
 }
 
 pub struct InteroperabilityField {
@@ -338,16 +347,19 @@ impl InteroperabilityField {
     }
 
     pub fn get_value_as_string(&self, slice: &[u8]) -> String {
-        match self.get_data_type() {
-            ExifTypes::Byte => format!("{}", self.get_byte()),
-            ExifTypes::Ascii => self.get_ascii(slice),
-            ExifTypes::Short => format!("{}", self.get_short()),
-            ExifTypes::Long => format!("{}", self.get_long()),
-            ExifTypes::Rational => format!("{}", self.get_long()),
-            ExifTypes::Undefined => format!("{}", self.get_long()),
-            ExifTypes::Slong => format!("{}", self.get_slong()),
-            ExifTypes::Srational => format!("{}", self.get_srational(slice)),
-            ExifTypes::Error => String::from("N/A"),
+        match get_tag_for_usize(self.get_tag()) {
+            Some(tag) => match self.get_data_type() {
+                ExifTypes::Byte => format!("{:?}: {}", tag, self.get_byte()),
+                ExifTypes::Ascii => format!("{:?}: {}", tag, self.get_ascii(slice)),
+                ExifTypes::Short => format!("{:?}: {}", tag, self.get_short()),
+                ExifTypes::Long => format!("{:?}: {}", tag, self.get_long()),
+                ExifTypes::Rational => format!("{:?}: {}", tag, self.get_long()),
+                ExifTypes::Undefined => format!("{:?}: {}", tag, self.get_long()),
+                ExifTypes::Slong => format!("{:?}: {}", tag, self.get_slong()),
+                ExifTypes::Srational => format!("{:?}: {}", tag, self.get_srational(slice)),
+                ExifTypes::Error => String::from("N/A"),
+            },
+            None => String::new(),
         }
     }
 

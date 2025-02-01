@@ -9,6 +9,7 @@ pub struct Jpeg {
     tiff: TIFFHeader,
     ifd_0: IFD,
     ifd_exif: IFD,
+    slice: Vec<u8>,
 }
 
 impl Image for Jpeg {
@@ -34,40 +35,25 @@ impl Image for Jpeg {
                 img_contents[exif_chunk_start..].as_ref()
             )
         );
-        println!(
-            "{:?}: {}",
-            Tags::Software,
-            ifd_0.get_value_as_string_for_tag(
-                get_usize_for_tag(Tags::Software),
-                img_contents[exif_chunk_start..].as_ref()
-            )
-        );
-        println!(
-            "{:?}: {}",
-            Tags::Copyright,
-            ifd_0.get_value_as_string_for_tag(
-                get_usize_for_tag(Tags::Copyright),
-                img_contents[exif_chunk_start..].as_ref()
-            )
-        );
 
         let idf_exif_start = match ifd_0.get_offset_for_tag(34665) {
             Some(idf_exif_start) => exif_chunk_start + idf_exif_start,
             None => panic!(""),
         };
         let ifd_exif = IFD::from(img_contents[idf_exif_start..].as_ref(), is_little_endian);
-        println!(
+        /*println!(
             "{}",
             ifd_exif
                 .get_interop_for_tag(40961)
                 .unwrap()
                 .get_value_as_string(img_contents[exif_chunk_start..].as_ref())
-        );
+        );*/
 
         Self {
             tiff,
             ifd_0,
             ifd_exif,
+            slice: Vec::from(img_contents[exif_chunk_start..].as_ref()),
         }
     }
 
@@ -78,5 +64,10 @@ impl Image for Jpeg {
             self.ifd_0.get_as_string(),
             //self.ifd_exif.get_as_string(),
         )
+    }
+
+    fn print_all_tags(&self) {
+        self.ifd_0.print_all_tags(self.slice.as_slice());
+        self.ifd_exif.print_all_tags(self.slice.as_slice());
     }
 }

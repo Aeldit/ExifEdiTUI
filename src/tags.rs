@@ -73,3 +73,39 @@ pub fn get_usize_for_tag(tag: Tags) -> usize {
         Tags::Copyright => 33432,
     }
 }
+
+pub fn get_tag_for_usize(tag: usize) -> Option<Tags> {
+    match tag {
+        256 => Some(Tags::ImageWidth),
+        257 => Some(Tags::ImageLength),
+        258 => Some(Tags::BitsPerSample),
+        259 => Some(Tags::Compression),
+        262 => Some(Tags::PhotometricInterpretation),
+        274 => Some(Tags::Orientation),
+        277 => Some(Tags::SamplesPerPixel),
+        284 => Some(Tags::PlanarConfiguration),
+        530 => Some(Tags::YCbCrSubSampling),
+        531 => Some(Tags::YCbCrPositioning),
+        282 => Some(Tags::XResolution),
+        283 => Some(Tags::YResolution),
+        296 => Some(Tags::ResolutionUnit),
+        273 => Some(Tags::StripOffsets),
+        278 => Some(Tags::RowsPerStrip),
+        279 => Some(Tags::StripByteCounts),
+        513 => Some(Tags::JPEGInterchangeFormat),
+        514 => Some(Tags::JPEGInterchangeFormatLength),
+        301 => Some(Tags::TransferFunction),
+        318 => Some(Tags::WhitePoint),
+        319 => Some(Tags::PrimaryChromaticities),
+        529 => Some(Tags::YCbCrCoefficients),
+        532 => Some(Tags::ReferenceBlackWhite),
+        306 => Some(Tags::DateTime),
+        270 => Some(Tags::ImageDescription),
+        271 => Some(Tags::Make),
+        272 => Some(Tags::Model),
+        305 => Some(Tags::Software),
+        315 => Some(Tags::Artist),
+        33432 => Some(Tags::Copyright),
+        _ => None,
+    }
+}
