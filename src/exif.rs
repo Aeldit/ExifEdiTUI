@@ -1,8 +1,8 @@
 use core::fmt;
 
 use crate::{
-    conversions::u8_4_to_i32_le, tags::get_tiff_tag_for_usize, u8_2_to_u16_be, u8_2_to_u16_le,
-    u8_4_to_u32_be, u8_4_to_u32_le,
+    conversions::{u8_2_to_u16_be, u8_2_to_u16_le, u8_4_to_i32_le, u8_4_to_u32_be, u8_4_to_u32_le},
+    tags::get_tag_for_usize,
 };
 
 // In bytes
@@ -26,6 +26,11 @@ pub enum ExifTypes {
     Srational,
     // Not defined by the spec
     Error,
+}
+
+pub enum IFDTypes {
+    TIFF,
+    Exif,
 }
 
 pub struct TIFFHeader {
@@ -347,7 +352,7 @@ impl InteroperabilityField {
     }
 
     pub fn get_value_as_string(&self, slice: &[u8]) -> String {
-        match get_tiff_tag_for_usize(self.get_tag()) {
+        match get_tag_for_usize(self.get_tag()) {
             Some(tag) => match self.get_data_type() {
                 ExifTypes::Byte => format!("{:?}: {}", tag, self.get_byte()),
                 ExifTypes::Ascii => format!("{:?}: {}", tag, self.get_ascii(slice)),

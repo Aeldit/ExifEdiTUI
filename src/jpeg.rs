@@ -43,10 +43,10 @@ impl Image for Jpeg {
 
     fn get_infos_as_string(&self) -> String {
         format!(
-            "{}\n{}\n",
+            "{}\n{}\n{}\n",
             self.tiff.get_as_string(),
             self.ifd_0.get_as_string(),
-            //self.ifd_exif.get_as_string(),
+            self.ifd_exif.get_as_string(),
         )
     }
 

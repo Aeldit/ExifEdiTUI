@@ -37,6 +37,106 @@ pub enum Tags {
     Software,
     Artist,
     Copyright,
+
+    // Exif
+    // Tags Relating to Version
+    ExifVersion,
+    FlashpixVersion,
+
+    // Tags Relating to ColorSpace
+    ColorSpace,
+    Gamma,
+
+    // Tags Relating to Image Configuration
+    ComponentsConfiguration,
+    CompressedBitsPerPixel,
+    PixelXDimension,
+    PixelYDimension,
+
+    // Tags Relating to User Information
+    MakerNote,
+    UserComment,
+
+    // Tag Relating to Related File Information
+    RelatedSoundFile,
+
+    // Tags Relating to Date and Time
+    DateTimeOriginal,
+    DateTimeDigitized,
+    OffsetTime,
+    OffsetTimeOriginal,
+    OffsetTimeDigitized,
+    SubSecTime,
+    SubSecTimeOriginal,
+    SubSecTimeDigitized,
+
+    // Tags Relating to Picture-Taking Conditions
+    ExposureTime,
+    FNumber,
+    ExposureProgram,
+    SpectralSensitivity,
+    PhotographicSensitivity,
+    OECF,
+    SensitivityType,
+    StandardOutputSensitivity,
+    RecommendedExposureIndex,
+    ISOSpeed,
+    ISOSpeedLatitudeyyy,
+    ISOSpeedLatitudezzz,
+    ShutterSpeedValue,
+    ApertureValue,
+    BrightnessValue,
+    ExposureBiasValue,
+    MaxApertureValue,
+    SubjectDistance,
+    MeteringMode,
+    LightSource,
+    Flash,
+    FocalLength,
+    SubjectArea,
+    FlashEnergy,
+    SpatialFrequencyResponse,
+    FocalPlaneXResolution,
+    FocalPlaneYResolution,
+    FocalPlaneResolutionUnit,
+    SubjectLocation,
+    ExposureIndex,
+    SensingMethod,
+    FileSource,
+    SceneType,
+    CFAPattern,
+    CustomRendered,
+    ExposureMode,
+    WhiteBalance,
+    DigitalZoomRatio,
+    FocalLengthIn35mmFilm,
+    SceneCaptureType,
+    GainControl,
+    Contrast,
+    Saturation,
+    Sharpness,
+    DeviceSettingDescription,
+    SubjectDistanceRange,
+    CompositeImage,
+    SourceImageNumberOfCompositeImage,
+    SourceExposureTimesOfCompositeImage,
+
+    // Tags Relating to shooting situation
+    Temperature,
+    Humidity,
+    Pressure,
+    WaterDepth,
+    Acceleration,
+    CameraElevationAngle,
+
+    // Other Tags
+    ImageUniqueID,
+    CameraOwnerName,
+    BodySerialNumber,
+    LensSpecification,
+    LensMake,
+    LensModel,
+    LensSerialNumber,
 }
 
 pub fn get_usize_for_tag(tag: Tags) -> usize {
@@ -71,6 +171,11 @@ pub fn get_usize_for_tag(tag: Tags) -> usize {
         Tags::Software => 305,
         Tags::Artist => 315,
         Tags::Copyright => 33432,
+        // Exif
+        Tags::ExifVersion => 36864,
+        Tags::FlashpixVersion => 40960,
+        Tags::ColorSpace => 40961,
+        Tags::Gamma => 42240,
     }
 }
 
