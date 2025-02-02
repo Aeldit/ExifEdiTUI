@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::{
-    conversions::u8_4_to_i32_le, tags::get_tag_for_usize, u8_2_to_u16_be, u8_2_to_u16_le,
+    conversions::u8_4_to_i32_le, tags::get_tiff_tag_for_usize, u8_2_to_u16_be, u8_2_to_u16_le,
     u8_4_to_u32_be, u8_4_to_u32_le,
 };
 
@@ -347,7 +347,7 @@ impl InteroperabilityField {
     }
 
     pub fn get_value_as_string(&self, slice: &[u8]) -> String {
-        match get_tag_for_usize(self.get_tag()) {
+        match get_tiff_tag_for_usize(self.get_tag()) {
             Some(tag) => match self.get_data_type() {
                 ExifTypes::Byte => format!("{:?}: {}", tag, self.get_byte()),
                 ExifTypes::Ascii => format!("{:?}: {}", tag, self.get_ascii(slice)),
@@ -355,17 +355,20 @@ impl InteroperabilityField {
                 ExifTypes::Long => format!("{:?}: {}", tag, self.get_long()),
                 ExifTypes::Rational => {
                     let rational = self.get_rational(slice);
-                    format!("{:?}: {}", tag, rational.0 / rational.1)
+                    format!("{:?}: {}/{}", tag, rational.0, rational.1)
                 }
                 ExifTypes::Undefined => format!("{:?}: {}", tag, self.get_long()),
                 ExifTypes::Slong => format!("{:?}: {}", tag, self.get_slong()),
                 ExifTypes::Srational => {
                     let srational = self.get_srational(slice);
-                    format!("{:?}: {}", tag, srational.0 / srational.1)
+                    format!("{:?}: {}/{}", tag, srational.0, srational.1)
                 }
                 ExifTypes::Error => String::from("N/A"),
             },
-            None => String::from("Not found"),
+            None => {
+                println!("{}", self.get_tag());
+                String::from("Not found")
+            }
         }
     }
 
@@ -374,18 +377,11 @@ impl InteroperabilityField {
     }
 
     fn get_ascii(&self, slice: &[u8]) -> String {
-        let mut res = String::new();
-        let mut i = 0;
-        for s in slice[self.get_value_offset()..].iter() {
-            res.push_str(format!("{}", *s as char).as_str());
-            i += 1;
-
-            if i == self.get_count() {
-                break;
-            }
-        }
-
-        res
+        String::from_iter(
+            slice[self.get_value_offset()..self.get_value_offset() + self.get_count()]
+                .iter()
+                .map(|b| *b as char),
+        )
     }
 
     fn get_short(&self) -> u16 {
