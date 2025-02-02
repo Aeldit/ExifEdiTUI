@@ -1,8 +1,8 @@
 use core::fmt;
 
 use crate::{
-    tags::{get_tag_for_usize, Tags},
-    u8_2_to_u16_be, u8_2_to_u16_le, u8_4_to_u32_be, u8_4_to_u32_le,
+    conversions::u8_4_to_i32_le, tags::get_tag_for_usize, u8_2_to_u16_be, u8_2_to_u16_le,
+    u8_4_to_u32_be, u8_4_to_u32_le,
 };
 
 // In bytes
@@ -317,7 +317,7 @@ impl InteroperabilityField {
         None
     }
 
-    pub fn get_value_srational(&self, slice: &[u8]) -> Option<u8> {
+    pub fn get_value_srational(&self, slice: &[u8]) -> Option<(i32, i32)> {
         if self.get_data_type() == ExifTypes::Byte {
             return Some(self.get_srational(slice));
         }
@@ -353,13 +353,19 @@ impl InteroperabilityField {
                 ExifTypes::Ascii => format!("{:?}: {}", tag, self.get_ascii(slice)),
                 ExifTypes::Short => format!("{:?}: {}", tag, self.get_short()),
                 ExifTypes::Long => format!("{:?}: {}", tag, self.get_long()),
-                ExifTypes::Rational => format!("{:?}: {}", tag, self.get_long()),
+                ExifTypes::Rational => {
+                    let rational = self.get_rational(slice);
+                    format!("{:?}: {}", tag, rational.0 / rational.1)
+                }
                 ExifTypes::Undefined => format!("{:?}: {}", tag, self.get_long()),
                 ExifTypes::Slong => format!("{:?}: {}", tag, self.get_slong()),
-                ExifTypes::Srational => format!("{:?}: {}", tag, self.get_srational(slice)),
+                ExifTypes::Srational => {
+                    let srational = self.get_srational(slice);
+                    format!("{:?}: {}", tag, srational.0 / srational.1)
+                }
                 ExifTypes::Error => String::from("N/A"),
             },
-            None => String::new(),
+            None => String::from("Not found"),
         }
     }
 
@@ -391,7 +397,26 @@ impl InteroperabilityField {
     }
 
     fn get_rational(&self, slice: &[u8]) -> (u32, u32) {
-        todo!()
+        if slice.len() < self.get_value_offset() + 8 {
+            return (0, 0);
+        }
+
+        let val_off = self.get_value_offset();
+
+        (
+            u8_4_to_u32_le((
+                slice[val_off],
+                slice[val_off + 1],
+                slice[val_off + 2],
+                slice[val_off + 3],
+            )),
+            u8_4_to_u32_le((
+                slice[val_off + 4],
+                slice[val_off + 5],
+                slice[val_off + 6],
+                slice[val_off + 7],
+            )),
+        )
     }
 
     fn get_undefined(&self) -> u8 {
@@ -405,8 +430,27 @@ impl InteroperabilityField {
             | self.value_offset.3 as i32
     }
 
-    fn get_srational(&self, slice: &[u8]) -> u8 {
-        todo!()
+    fn get_srational(&self, slice: &[u8]) -> (i32, i32) {
+        if slice.len() < self.get_value_offset() + 8 {
+            return (0, 0);
+        }
+
+        let val_off = self.get_value_offset();
+
+        (
+            u8_4_to_i32_le((
+                slice[val_off],
+                slice[val_off + 1],
+                slice[val_off + 2],
+                slice[val_off + 3],
+            )),
+            u8_4_to_i32_le((
+                slice[val_off + 4],
+                slice[val_off + 5],
+                slice[val_off + 6],
+                slice[val_off + 7],
+            )),
+        )
     }
 }
 

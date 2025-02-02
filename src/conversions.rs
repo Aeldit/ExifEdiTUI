@@ -70,6 +70,10 @@ pub fn u8_4_to_u32_le(u: (u8, u8, u8, u8)) -> u32 {
     ((u.3 as u32) << 24) | ((u.2 as u32) << 16) | ((u.1 as u32) << 8) | (u.0 as u32)
 }
 
+pub fn u8_4_to_i32_le(u: (u8, u8, u8, u8)) -> i32 {
+    ((u.3 as i32) << 24) | ((u.2 as i32) << 16) | ((u.1 as i32) << 8) | (u.0 as i32)
+}
+
 pub fn u8_8_to_u64_be(u: (u8, u8, u8, u8, u8, u8, u8, u8)) -> u64 {
     ((u.0 as u64) << 56)
         | ((u.1 as u64) << 48)

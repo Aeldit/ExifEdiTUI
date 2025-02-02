@@ -32,6 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let img = match img_type {
         ImageType::Jpeg => <Jpeg as Image>::from(img_contents),
     };
+    println!("{}", img.get_infos_as_string());
     img.print_all_tags();
 
     Ok(())
