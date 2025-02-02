@@ -352,6 +352,7 @@ impl InteroperabilityField {
     }
 
     pub fn get_value_as_string(&self, slice: &[u8]) -> String {
+        // TODO: Handle cases where the value is an enum
         match get_tag_for_usize(self.get_tag()) {
             Some(tag) => match self.get_data_type() {
                 ExifTypes::Byte => format!("{:?}: {}", tag, self.get_byte()),
