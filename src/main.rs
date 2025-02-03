@@ -3,7 +3,6 @@ use std::{env::args, fs};
 mod conversions;
 pub mod exif;
 pub mod tags;
-use conversions::*;
 use image::{get_image_type_for, Image, ImageType};
 
 mod image;
