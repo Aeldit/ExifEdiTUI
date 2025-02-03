@@ -2,6 +2,7 @@ pub enum ImageType {
     Jpeg,
 }
 
+#[allow(dead_code)]
 pub trait Image {
     fn from(slice: Vec<u8>) -> Self;
 
