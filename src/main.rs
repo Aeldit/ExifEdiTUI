@@ -1,6 +1,6 @@
 use std::{env::args, fs};
 
-mod conversions;
+mod arrays;
 pub mod exif;
 pub mod tags;
 use image::{get_image_type_for, Image, ImageType};
@@ -9,6 +9,9 @@ mod image;
 
 mod jpeg;
 use jpeg::Jpeg;
+
+//mod png;
+//use png::Png;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = args().collect();
@@ -30,6 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let img = match img_type {
         ImageType::Jpeg => <Jpeg as Image>::from(img_contents),
+        ImageType::Png => return Ok(()), //<Png as Image>::from(img_contents),
     };
     img.print_all_tags();
 

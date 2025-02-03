@@ -1,9 +1,6 @@
 use core::fmt;
 
-use crate::{
-    conversions::{u8_2_to_u16_be, u8_2_to_u16_le, u8_4_to_i32_le, u8_4_to_u32_be, u8_4_to_u32_le},
-    tags::get_tag_for_usize,
-};
+use crate::tags::get_tag_for_usize;
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
@@ -34,10 +31,10 @@ pub enum IFDTypes {
 }
 
 pub struct TIFFHeader {
-    byte_order: (u8, u8),
+    byte_order: [u8; 2],
     // Not used but in the spec
-    // fixed: (u8, u8),
-    ifd_offset: (u8, u8, u8, u8), // If = 8 => followed directly by the 0th IFD
+    // fixed: [u8; 2],
+    ifd_offset: [u8; 4], // If = 8 => followed directly by the 0th IFD
 }
 
 impl TIFFHeader {
@@ -51,20 +48,20 @@ impl TIFFHeader {
         }
 
         Self {
-            byte_order: (slice[0], slice[1]),
-            ifd_offset: (slice[4], slice[5], slice[6], slice[7]),
+            byte_order: slice[0..2].try_into().unwrap(),
+            ifd_offset: slice[4..8].try_into().unwrap(),
         }
     }
 
     pub fn is_little_endian(&self) -> bool {
-        self.byte_order == (0x49, 0x49)
+        self.byte_order == [0x49, 0x49]
     }
 
     pub fn get_0th_idf_offset(&self) -> u32 {
         let off = if self.is_little_endian() {
-            u8_4_to_u32_le(self.ifd_offset)
+            u32::from_le_bytes(self.ifd_offset)
         } else {
-            u8_4_to_u32_be(self.ifd_offset)
+            u32::from_be_bytes(self.ifd_offset)
         };
 
         if off == 8 {
@@ -83,11 +80,7 @@ impl TIFFHeader {
                 "Big endian (MM)"
             },
             {
-                let off = if self.is_little_endian() {
-                    u8_4_to_u32_le(self.ifd_offset)
-                } else {
-                    u8_4_to_u32_be(self.ifd_offset)
-                };
+                let off = self.get_0th_idf_offset();
                 if off == 8 {
                     0
                 } else {
@@ -99,7 +92,7 @@ impl TIFFHeader {
 }
 
 pub struct IFD {
-    pub number_of_fields: (u8, u8),
+    pub number_of_fields: [u8; 2],
     pub interoperability_arrays: Vec<InteroperabilityField>, // Vec of size number_of_fields
     // Not in the spec
     is_little_endian: bool,
@@ -115,9 +108,9 @@ impl IFD {
         }
 
         let number_of_fields = if is_little_endian {
-            u8_2_to_u16_le((slice[0], slice[1]))
+            u16::from_le_bytes(slice[0..2].try_into().unwrap())
         } else {
-            u8_2_to_u16_be((slice[0], slice[1]))
+            u16::from_be_bytes(slice[0..2].try_into().unwrap())
         };
 
         if slice.len() < 2 + INTEROPERABILITY_FIELD_SIZE * number_of_fields as usize {
@@ -138,7 +131,7 @@ impl IFD {
         }
 
         Self {
-            number_of_fields: (slice[0], slice[1]),
+            number_of_fields: slice[0..2].try_into().unwrap(),
             interoperability_arrays: interoperatibility_array,
             is_little_endian,
         }
@@ -161,9 +154,9 @@ impl IFD {
 
     pub fn get_offset_to_next_ifd(&self) -> usize {
         2 + if self.is_little_endian {
-            u8_2_to_u16_le(self.number_of_fields) as usize
+            u16::from_le_bytes(self.number_of_fields) as usize
         } else {
-            u8_2_to_u16_be(self.number_of_fields) as usize
+            u16::from_be_bytes(self.number_of_fields) as usize
         } * INTEROPERABILITY_FIELD_SIZE
             + 4
     }
@@ -185,9 +178,9 @@ impl IFD {
         format!(
             "IFD {{\n\tNumber of fields: {},\n\tinteroperability: {}\n}}",
             if self.is_little_endian {
-                u8_2_to_u16_le(self.number_of_fields)
+                u16::from_le_bytes(self.number_of_fields)
             } else {
-                u8_2_to_u16_be(self.number_of_fields)
+                u16::from_be_bytes(self.number_of_fields)
             },
             self.get_array_as_string(),
         )
@@ -212,10 +205,10 @@ impl IFD {
 }
 
 pub struct InteroperabilityField {
-    tag: (u8, u8),
-    data_type: (u8, u8),
-    count: (u8, u8, u8, u8),
-    value_offset: (u8, u8, u8, u8),
+    tag: [u8; 2],
+    data_type: [u8; 2],
+    count: [u8; 4],
+    value_offset: [u8; 4],
     // Not defined by the spec
     is_little_endian: bool,
 }
@@ -231,27 +224,27 @@ impl InteroperabilityField {
         }
 
         Self {
-            tag: (slice[0], slice[1]),
-            data_type: (slice[2], slice[3]),
-            count: (slice[4], slice[5], slice[6], slice[7]),
-            value_offset: (slice[8], slice[9], slice[10], slice[11]),
+            tag: slice[0..2].try_into().unwrap(),
+            data_type: slice[2..4].try_into().unwrap(),
+            count: slice[4..8].try_into().unwrap(),
+            value_offset: slice[8..12].try_into().unwrap(),
             is_little_endian,
         }
     }
 
     pub fn get_tag(&self) -> usize {
         if self.is_little_endian {
-            u8_2_to_u16_le(self.tag) as usize
+            u16::from_le_bytes(self.tag) as usize
         } else {
-            u8_2_to_u16_be(self.tag) as usize
+            u16::from_be_bytes(self.tag) as usize
         }
     }
 
     pub fn get_data_type(&self) -> ExifTypes {
         match if self.is_little_endian {
-            u8_2_to_u16_le(self.data_type)
+            u16::from_le_bytes(self.data_type)
         } else {
-            u8_2_to_u16_be(self.data_type)
+            u16::from_be_bytes(self.data_type)
         } {
             1 => ExifTypes::Byte,
             2 => ExifTypes::Ascii,
@@ -267,9 +260,9 @@ impl InteroperabilityField {
 
     pub fn get_value_offset(&self) -> usize {
         if self.is_little_endian {
-            u8_4_to_u32_le(self.value_offset) as usize
+            u32::from_le_bytes(self.value_offset) as usize
         } else {
-            u8_4_to_u32_be(self.value_offset) as usize
+            u32::from_be_bytes(self.value_offset) as usize
         }
     }
 
@@ -345,9 +338,9 @@ impl InteroperabilityField {
 
     pub fn get_count(&self) -> usize {
         if self.is_little_endian {
-            u8_4_to_u32_le(self.count) as usize
+            u32::from_le_bytes(self.count) as usize
         } else {
-            u8_4_to_u32_be(self.count) as usize
+            u32::from_be_bytes(self.count) as usize
         }
     }
 
@@ -379,7 +372,7 @@ impl InteroperabilityField {
     }
 
     fn get_byte(&self) -> u8 {
-        self.value_offset.0
+        self.value_offset[0]
     }
 
     fn get_ascii(&self, slice: &[u8]) -> String {
@@ -391,11 +384,11 @@ impl InteroperabilityField {
     }
 
     fn get_short(&self) -> u16 {
-        u8_4_to_u32_le(self.value_offset) as u16
+        u32::from_le_bytes(self.value_offset) as u16
     }
 
     fn get_long(&self) -> u32 {
-        u8_4_to_u32_le(self.value_offset)
+        u32::from_le_bytes(self.value_offset)
     }
 
     fn get_rational(&self, slice: &[u8]) -> (u32, u32) {
@@ -406,30 +399,17 @@ impl InteroperabilityField {
         let val_off = self.get_value_offset();
 
         (
-            u8_4_to_u32_le((
-                slice[val_off],
-                slice[val_off + 1],
-                slice[val_off + 2],
-                slice[val_off + 3],
-            )),
-            u8_4_to_u32_le((
-                slice[val_off + 4],
-                slice[val_off + 5],
-                slice[val_off + 6],
-                slice[val_off + 7],
-            )),
+            u32::from_le_bytes(slice[val_off..val_off + 4].try_into().unwrap()),
+            u32::from_le_bytes(slice[val_off + 4..val_off + 8].try_into().unwrap()),
         )
     }
 
     fn get_undefined(&self) -> u8 {
-        self.value_offset.0
+        self.value_offset[0]
     }
 
     fn get_slong(&self) -> i32 {
-        (self.value_offset.0 as i32) << 24
-            | (self.value_offset.1 as i32) << 16
-            | (self.value_offset.2 as i32) << 8
-            | self.value_offset.3 as i32
+        i32::from_le_bytes(self.value_offset)
     }
 
     fn get_srational(&self, slice: &[u8]) -> (i32, i32) {
@@ -440,18 +420,8 @@ impl InteroperabilityField {
         let val_off = self.get_value_offset();
 
         (
-            u8_4_to_i32_le((
-                slice[val_off],
-                slice[val_off + 1],
-                slice[val_off + 2],
-                slice[val_off + 3],
-            )),
-            u8_4_to_i32_le((
-                slice[val_off + 4],
-                slice[val_off + 5],
-                slice[val_off + 6],
-                slice[val_off + 7],
-            )),
+            i32::from_le_bytes(slice[val_off..val_off + 4].try_into().unwrap()),
+            i32::from_le_bytes(slice[val_off + 4..val_off + 8].try_into().unwrap()),
         )
     }
 }
@@ -477,39 +447,27 @@ impl fmt::Display for InteroperabilityField {
                     type: {} {} => {} ({}),
                     count: {} {} {} {} => {},
                     value_offset: {} {} {} {} => {}\n\t\t}}",
-            self.tag.0,
-            self.tag.1,
+            self.tag[0],
+            self.tag[1],
+            self.get_tag(),
+            self.data_type[0],
+            self.data_type[1],
             if self.is_little_endian {
-                u8_2_to_u16_le(self.tag)
+                u16::from_le_bytes(self.data_type)
             } else {
-                u8_2_to_u16_be(self.tag)
-            },
-            self.data_type.0,
-            self.data_type.1,
-            if self.is_little_endian {
-                u8_2_to_u16_le(self.data_type)
-            } else {
-                u8_2_to_u16_be(self.data_type)
+                u16::from_be_bytes(self.data_type)
             },
             self.get_type_as_string(),
-            self.count.0,
-            self.count.1,
-            self.count.2,
-            self.count.3,
-            if self.is_little_endian {
-                u8_4_to_u32_le(self.count)
-            } else {
-                u8_4_to_u32_be(self.count)
-            },
-            self.value_offset.0,
-            self.value_offset.1,
-            self.value_offset.2,
-            self.value_offset.3,
-            if self.is_little_endian {
-                u8_4_to_u32_le(self.value_offset)
-            } else {
-                u8_4_to_u32_be(self.value_offset)
-            },
+            self.count[0],
+            self.count[1],
+            self.count[2],
+            self.count[3],
+            self.get_count(),
+            self.value_offset[0],
+            self.value_offset[1],
+            self.value_offset[2],
+            self.value_offset[3],
+            self.get_value_offset(),
         )
     }
 }

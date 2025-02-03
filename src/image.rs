@@ -1,5 +1,6 @@
 pub enum ImageType {
     Jpeg,
+    Png,
 }
 
 #[allow(dead_code)]
@@ -25,6 +26,8 @@ pub fn get_image_type_for(slice: &[u8]) -> Option<ImageType> {
         )
     {
         return Some(ImageType::Jpeg);
+    } else if slice.starts_with(vec![0x49, 0x48, 0x44, 0x52].as_ref()) {
+        return Some(ImageType::Png);
     }
     None
 }

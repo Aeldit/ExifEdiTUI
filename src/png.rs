@@ -4,16 +4,16 @@ use crate::{
     image::Image,
 };
 
-pub struct Jpeg {
+pub struct Png {
     tiff: TIFFHeader,
     ifd_0: IFD,
     ifd_exif: IFD,
     slice: Vec<u8>,
 }
 
-impl Image for Jpeg {
+impl Image for Png {
     fn from(img_contents: Vec<u8>) -> Self {
-        let exif_identifier_code_jpeg = vec![0x45, 0x78, 0x69, 0x66]; // Exif
+        let exif_identifier_code_jpeg = vec![0x65, 0x58, 0x49, 0x66]; // eXIf
         let exif_chunk_start =
             match index_of_sub_array(img_contents.clone(), exif_identifier_code_jpeg.clone()) {
                 Some(magic_start) => magic_start + exif_identifier_code_jpeg.len() + 2,
