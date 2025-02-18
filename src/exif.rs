@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::tags::get_tag_for_usize;
+use crate::tags::{get_tag_for_usize, Tag, Tagss};
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
@@ -346,28 +346,25 @@ impl InteroperabilityField {
 
     pub fn get_value_as_string(&self, slice: &[u8]) -> String {
         // TODO: Handle cases where the value is an enum
-        match get_tag_for_usize(self.get_tag()) {
-            Some(tag) => match self.get_data_type() {
-                ExifTypes::Byte => format!("{:?}: {}", tag, self.get_byte()),
-                ExifTypes::Ascii => format!("{:?}: {}", tag, self.get_ascii(slice)),
-                ExifTypes::Short => format!("{:?}: {}", tag, self.get_short()),
-                ExifTypes::Long => format!("{:?}: {}", tag, self.get_long()),
-                ExifTypes::Rational => {
-                    let rational = self.get_rational(slice);
-                    format!("{:?}: {}/{}", tag, rational.0, rational.1)
-                }
-                ExifTypes::Undefined => format!("{:?}: {}", tag, self.get_long()),
-                ExifTypes::Slong => format!("{:?}: {}", tag, self.get_slong()),
-                ExifTypes::Srational => {
-                    let srational = self.get_srational(slice);
-                    format!("{:?}: {}/{}", tag, srational.0, srational.1)
-                }
-                ExifTypes::Error => String::from("N/A"),
-            },
-            None => {
-                println!("{}", self.get_tag());
-                String::from("Not found")
+        let tag = Tag(self.get_tag());
+        match self.get_data_type() {
+            ExifTypes::Byte => format!("{}: {}", tag, self.get_byte()),
+            ExifTypes::Ascii => {
+                format!("{}: {} {}", tag, self.get_ascii(slice), Tagss::ExifOffset)
             }
+            ExifTypes::Short => format!("{}: {}", tag, self.get_short()),
+            ExifTypes::Long => format!("{}: {}", tag, self.get_long()),
+            ExifTypes::Rational => {
+                let rational = self.get_rational(slice);
+                format!("{}: {}/{}", tag, rational.0, rational.1)
+            }
+            ExifTypes::Undefined => format!("{}: {}", tag, self.get_long()),
+            ExifTypes::Slong => format!("{}: {}", tag, self.get_slong()),
+            ExifTypes::Srational => {
+                let srational = self.get_srational(slice);
+                format!("{}: {}/{}", tag, srational.0, srational.1)
+            }
+            ExifTypes::Error => String::from("N/A"),
         }
     }
 
@@ -376,11 +373,14 @@ impl InteroperabilityField {
     }
 
     fn get_ascii(&self, slice: &[u8]) -> String {
-        String::from_iter(
-            slice[self.get_value_offset()..self.get_value_offset() + self.get_count()]
-                .iter()
-                .map(|b| *b as char),
-        )
+        let start = self.get_value_offset();
+        let end = start + self.get_count();
+
+        if start >= slice.len() || end >= slice.len() {
+            return String::from("ERROR");
+        }
+
+        String::from_iter(slice[start..end].iter().map(|b| *b as char))
     }
 
     fn get_short(&self) -> u16 {
