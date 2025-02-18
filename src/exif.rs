@@ -162,10 +162,10 @@ impl IFD {
             + 4
     }
 
-    pub fn get_offset_for_tag(&self, tag: usize) -> Option<usize> {
+    pub fn get_offset_for_tag(&self, tag: Tag) -> Option<usize> {
         self.interoperability_arrays
             .iter()
-            .find(|interop| interop.get_tag() == tag)
+            .find(|interop| interop.get_tag() == tag.0)
             .map(|interop| interop.get_value_offset())
     }
 
@@ -391,11 +391,10 @@ impl InteroperabilityField {
     }
 
     fn get_rational(&self, slice: &[u8]) -> (u32, u32) {
-        if slice.len() < self.get_value_offset() + 8 {
+        let val_off = self.get_value_offset();
+        if slice.len() < val_off + 8 {
             return (0, 0);
         }
-
-        let val_off = self.get_value_offset();
 
         (
             u32::from_le_bytes(slice[val_off..val_off + 4].try_into().unwrap()),
