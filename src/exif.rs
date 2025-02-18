@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::tags::{get_tag_for_usize, Tag, Tagss};
+use crate::tags::Tag;
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
@@ -349,9 +349,7 @@ impl InteroperabilityField {
         let tag = Tag(self.get_tag());
         match self.get_data_type() {
             ExifTypes::Byte => format!("{}: {}", tag, self.get_byte()),
-            ExifTypes::Ascii => {
-                format!("{}: {} {}", tag, self.get_ascii(slice), Tagss::ExifOffset)
-            }
+            ExifTypes::Ascii => format!("{}: {}", tag, self.get_ascii(slice)),
             ExifTypes::Short => format!("{}: {}", tag, self.get_short()),
             ExifTypes::Long => format!("{}: {}", tag, self.get_long()),
             ExifTypes::Rational => {
