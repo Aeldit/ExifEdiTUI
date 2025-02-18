@@ -28,7 +28,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let img_type = match get_image_type_for(img_contents.as_ref()) {
         Some(img_type) => img_type,
-        None => return Ok(()),
+        None => {
+            eprintln!("Unsupported image type");
+            return Ok(());
+        }
     };
 
     let img = match img_type {

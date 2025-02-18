@@ -28,6 +28,7 @@ pub enum ExifTypes {
 pub enum IFDTypes {
     TIFF,
     Exif,
+    GPS,
 }
 
 pub struct TIFFHeader {
