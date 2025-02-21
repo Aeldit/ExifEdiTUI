@@ -474,6 +474,54 @@ impl InteroperabilityField {
                             _ => "reserved",
                         }
                     )
+                } else if tag == Tags::MeteringMode && self.ccount == 1 && values.len() == 1 {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        match values[0] {
+                            0 => "unknown",
+                            1 => "Average",
+                            2 => "CenterWeightedAverage",
+                            3 => "Spot",
+                            4 => "MultiSpot",
+                            5 => "Pattern",
+                            6 => "Partial",
+                            255 => "other",
+                            _ => "reserved",
+                        }
+                    )
+                } else if tag == Tags::LightSource && self.ccount == 1 && values.len() == 1 {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        match values[0] {
+                            0 => "unknown",
+                            1 => "Daylight",
+                            2 => "Fluorescent",
+                            3 => "Tungsten (incandescent light)",
+                            4 => "Flash",
+                            9 => "Fine weather",
+                            10 => "Cloudy weather",
+                            11 => "Shade",
+                            12 => "Daylight fluorescent (D 5700 - 7100K)",
+                            13 => "Day white fluorescent (N 4600 - 5500K)",
+                            14 => "Cool white fluorescent (W 3800 - 4500K)",
+                            15 => "White fluorescent (WW 3250 - 3800K)",
+                            16 => "Warm white fluorescent (L 2600 - 3250K)",
+                            17 => "Standard light A",
+                            18 => "Standard light B",
+                            19 => "Standard light C",
+                            20 => "D55",
+                            21 => "D65",
+                            22 => "D75",
+                            23 => "D50",
+                            24 => "ISO studio tungsten",
+                            255 => "other light source",
+                            _ => "reserved",
+                        }
+                    )
+                } else if tag == Tags::Flash && self.ccount == 1 && values.len() == 1 {
+                    format!("{}: ", tag)
                 } else {
                     format!("{}: {}", tag, self.get_vec_as_string(values))
                 }
