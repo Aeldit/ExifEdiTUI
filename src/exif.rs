@@ -1,6 +1,8 @@
 use core::fmt;
 
-use crate::tags::{Tag, Tags};
+use crate::tags::{get_short_string_for_tag, get_undefined_string_for_tag, Tag};
+
+use crate::arrays::{get_ratioanls_vec_as_string, get_vec_as_string};
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
@@ -344,293 +346,39 @@ impl InteroperabilityField {
     }
 
     pub fn get_value_as_string(&self, slice: &[u8]) -> String {
-        // TODO: Handle cases where the value is an enum
         let tag = Tag(self.ctag);
         match self.cdata_type {
             ExifTypes::Byte => {
-                format!("{}: {}", tag, self.get_vec_as_string(self.get_bytes(slice)))
+                format!("{}: {}", tag, get_vec_as_string(self.get_bytes(slice)))
             }
             ExifTypes::Ascii => format!("{}: {}", tag, self.get_ascii(slice)),
             ExifTypes::Short => {
                 let values = self.get_shorts(slice);
-                if tag == Tags::Compression && self.ccount == 1 && values.len() == 1 {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        if values[0] == 1 {
-                            "uncompressed"
-                        } else if values[0] == 6 {
-                            "JPEG compression (thumbnails only)"
-                        } else {
-                            "reserved"
-                        }
-                    )
-                } else if tag == Tags::PhotometricInterpretation
-                    && self.ccount == 1
-                    && values.len() == 1
-                {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        if values[0] == 2 {
-                            "RGB"
-                        } else if values[0] == 6 {
-                            "YCbCr"
-                        } else {
-                            "reserved"
-                        }
-                    )
-                } else if tag == Tags::PlanarConfiguration && self.ccount == 1 && values.len() == 1
-                {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        if values[0] == 1 {
-                            "chunky format"
-                        } else if values[0] == 2 {
-                            "planar format"
-                        } else {
-                            "reserved"
-                        }
-                    )
-                } else if tag == Tags::YCbCrSubSampling && self.ccount == 2 && values.len() == 2 {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        if values[0] == 2 && values[1] == 1 {
-                            "YCbCr4:2:2"
-                        } else if values[0] == 2 && values[1] == 2 {
-                            "YCbCr4:2:0"
-                        } else {
-                            "reserved"
-                        }
-                    )
-                } else if tag == Tags::YCbCrPositioning && self.ccount == 1 && values.len() == 1 {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        if values[0] == 1 {
-                            "centered"
-                        } else if values[0] == 2 {
-                            "co-sited"
-                        } else {
-                            "reserved"
-                        }
-                    )
-                } else if tag == Tags::ResolutionUnit && self.ccount == 1 && values.len() == 1 {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        if values[0] == 2 {
-                            "inches"
-                        } else if values[0] == 3 {
-                            "centimeters"
-                        } else {
-                            "reserved"
-                        }
-                    )
-                } else if tag == Tags::ColorSpace && self.ccount == 1 && values.len() == 1 {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        if values[0] == 1 {
-                            "sRGB"
-                        } else if values[0] == 0xFFFF {
-                            "Uncalibrated"
-                        } else {
-                            "reserved"
-                        }
-                    )
-                } else if tag == Tags::ExposureProgram && self.ccount == 1 && values.len() == 1 {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        match values[0] {
-                            0 => "Not defined",
-                            1 => "Manual",
-                            2 => "Normal program",
-                            3 => "Aperture priority",
-                            4 => "Shutter priority",
-                            5 => "Creative program (biased toward depth of field)",
-                            6 => "Action program (biased toward fast shutter speed)",
-                            7 => "Portrait mode (for closeup photos with the background out of focus)",
-                            8 => "Landscape mode (for landscape photos with the background in focus)",
-                            _ => "reserved",
-                        }
-                    )
-                } else if tag == Tags::SensitivityType && self.ccount == 1 && values.len() == 1 {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        match values[0] {
-                            0 => "Unknown",
-                            1 => "Standard output sensitivity (SOS)",
-                            2 => "Recommended exposure index (REI)",
-                            3 => "ISO speed",
-                            4 => "Standard output sensitivity (SOS) and recommended exposure index (REI)",
-                            5 => "Standard output sensitivity (SOS) and ISO speed",
-                            6 => "Recommended exposure index (REI) and ISO speed",
-                            7 => "Standard output sensitivity (SOS) and recommended exposure index (REI) and ISO speed",
-                            _ => "reserved",
-                        }
-                    )
-                } else if tag == Tags::MeteringMode && self.ccount == 1 && values.len() == 1 {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        match values[0] {
-                            0 => "unknown",
-                            1 => "Average",
-                            2 => "CenterWeightedAverage",
-                            3 => "Spot",
-                            4 => "MultiSpot",
-                            5 => "Pattern",
-                            6 => "Partial",
-                            255 => "other",
-                            _ => "reserved",
-                        }
-                    )
-                } else if tag == Tags::LightSource && self.ccount == 1 && values.len() == 1 {
-                    format!(
-                        "{}: {}",
-                        tag,
-                        match values[0] {
-                            0 => "unknown",
-                            1 => "Daylight",
-                            2 => "Fluorescent",
-                            3 => "Tungsten (incandescent light)",
-                            4 => "Flash",
-                            9 => "Fine weather",
-                            10 => "Cloudy weather",
-                            11 => "Shade",
-                            12 => "Daylight fluorescent (D 5700 - 7100K)",
-                            13 => "Day white fluorescent (N 4600 - 5500K)",
-                            14 => "Cool white fluorescent (W 3800 - 4500K)",
-                            15 => "White fluorescent (WW 3250 - 3800K)",
-                            16 => "Warm white fluorescent (L 2600 - 3250K)",
-                            17 => "Standard light A",
-                            18 => "Standard light B",
-                            19 => "Standard light C",
-                            20 => "D55",
-                            21 => "D65",
-                            22 => "D75",
-                            23 => "D50",
-                            24 => "ISO studio tungsten",
-                            255 => "other light source",
-                            _ => "reserved",
-                        }
-                    )
-                } else if tag == Tags::Flash && self.ccount == 1 && values.len() == 1 {
-                    format!("{}: ", tag)
-                } else {
-                    format!("{}: {}", tag, self.get_vec_as_string(values))
-                }
+                get_short_string_for_tag(tag, self.ccount, values)
             }
             ExifTypes::Long => {
-                format!("{}: {}", tag, self.get_vec_as_string(self.get_longs(slice)))
+                format!("{}: {}", tag, get_vec_as_string(self.get_longs(slice)))
             }
             ExifTypes::Rational => {
                 format!(
                     "{}: {}",
                     tag,
-                    self.get_ratioanls_vec_as_string(self.get_rationals(slice))
+                    get_ratioanls_vec_as_string(self.get_rationals(slice))
                 )
             }
             ExifTypes::Undefined => {
-                if tag == Tags::ExifVersion && self.ccount == 4 {
-                    format!(
-                        "{}: {:?}",
-                        tag,
-                        String::from_iter(self.value_offset.iter().map(|b| *b as char))
-                    )
-                } else if tag == Tags::FlashpixVersion
-                    && self.ccount == 4
-                    && self.value_offset[0] == 48
-                    && self.value_offset[1] == 49
-                    && self.value_offset[2] == 48
-                    && self.value_offset[3] == 48
-                {
-                    format!("{}: Flashpix Format Version 1.0", tag)
-                } else if tag == Tags::ComponentsConfiguration && self.ccount == 4 {
-                    format!(
-                        "{}: {}{}{}",
-                        tag,
-                        match self.value_offset[0] {
-                            1 => "Y",
-                            2 => "Cb",
-                            3 => "Cr",
-                            4 => "R",
-                            5 => "G",
-                            6 => "B",
-                            _ => "",
-                        },
-                        match self.value_offset[1] {
-                            1 => "Y",
-                            2 => "Cb",
-                            3 => "Cr",
-                            4 => "R",
-                            5 => "G",
-                            6 => "B",
-                            _ => "",
-                        },
-                        match self.value_offset[2] {
-                            1 => "Y",
-                            2 => "Cb",
-                            3 => "Cr",
-                            4 => "R",
-                            5 => "G",
-                            6 => "B",
-                            _ => "",
-                        }
-                    )
-                } else if tag == Tags::OECF {
-                    todo!() // TODO:
-                } else {
-                    format!("{}: Undefined", tag)
-                }
+                get_undefined_string_for_tag(tag, self.ccount, self.value_offset)
             }
-            ExifTypes::Slong => format!(
-                "{}: {}",
-                tag,
-                self.get_vec_as_string(self.get_slongs(slice))
-            ),
+            ExifTypes::Slong => format!("{}: {}", tag, get_vec_as_string(self.get_slongs(slice))),
             ExifTypes::Srational => {
                 format!(
                     "{}: {}",
                     tag,
-                    self.get_ratioanls_vec_as_string(self.get_srational(slice))
+                    get_ratioanls_vec_as_string(self.get_srational(slice))
                 )
             }
             ExifTypes::Error => String::from("N/A"),
         }
-    }
-
-    fn get_vec_as_string<T: fmt::Display>(&self, vec: Vec<T>) -> String {
-        let mut s = String::new();
-        let len = vec.len();
-        for (i, value) in vec.iter().enumerate() {
-            if i == len - 1 {
-                s.push_str(format!("{}", value).as_str());
-            } else {
-                s.push_str(format!("{} ", value).as_str());
-            }
-        }
-
-        s
-    }
-
-    fn get_ratioanls_vec_as_string<T: fmt::Display>(&self, vec: Vec<(T, T)>) -> String {
-        let mut s = String::new();
-        let len = vec.len();
-        for (i, value) in vec.iter().enumerate() {
-            if i == len - 1 {
-                s.push_str(format!("{}/{}", value.0, value.1).as_str());
-            } else {
-                s.push_str(format!("{}/{} ", value.0, value.1).as_str());
-            }
-        }
-
-        s
     }
 
     fn get_bytes(&self, slice: &[u8]) -> Vec<u8> {
