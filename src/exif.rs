@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::tags::Tag;
+use crate::tags::{Tag, Tags};
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
@@ -165,14 +165,14 @@ impl IFD {
     pub fn get_offset_for_tag(&self, tag: Tag) -> Option<usize> {
         self.interoperability_arrays
             .iter()
-            .find(|interop| interop.get_tag() == tag.0)
-            .map(|interop| interop.get_value_offset())
+            .find(|interop| interop.ctag == tag.0)
+            .map(|interop| interop.cvalue_offset)
     }
 
     pub fn get_interop_for_tag(&self, tag: usize) -> Option<&InteroperabilityField> {
         self.interoperability_arrays
             .iter()
-            .find(|interop| interop.get_tag() == tag)
+            .find(|interop| interop.ctag == tag)
     }
 
     pub fn get_as_string(&self) -> String {
@@ -191,7 +191,7 @@ impl IFD {
         match self
             .interoperability_arrays
             .iter()
-            .find(|interop| interop.get_tag() == tag)
+            .find(|interop| interop.ctag == tag)
         {
             Some(interop) => interop.get_value_as_string(slice),
             None => String::from("Error"),
@@ -212,6 +212,11 @@ pub struct InteroperabilityField {
     value_offset: [u8; 4],
     // Not defined by the spec
     is_little_endian: bool,
+    // Calculated values
+    ctag: usize,
+    cdata_type: ExifTypes,
+    ccount: usize,
+    cvalue_offset: usize,
 }
 
 impl InteroperabilityField {
@@ -224,107 +229,108 @@ impl InteroperabilityField {
             );
         }
 
+        let tag: [u8; 2] = slice[0..2].try_into().unwrap();
+        let data_type: [u8; 2] = slice[2..4].try_into().unwrap();
+        let count: [u8; 4] = slice[4..8].try_into().unwrap();
+        let value_offset: [u8; 4] = slice[8..12].try_into().unwrap();
+
         Self {
-            tag: slice[0..2].try_into().unwrap(),
-            data_type: slice[2..4].try_into().unwrap(),
-            count: slice[4..8].try_into().unwrap(),
-            value_offset: slice[8..12].try_into().unwrap(),
+            tag,
+            data_type,
+            count,
+            value_offset,
             is_little_endian,
+            ctag: if is_little_endian {
+                u16::from_le_bytes(tag)
+            } else {
+                u16::from_be_bytes(tag)
+            } as usize,
+            cdata_type: match if is_little_endian {
+                u16::from_le_bytes(data_type)
+            } else {
+                u16::from_be_bytes(data_type)
+            } {
+                1 => ExifTypes::Byte,
+                2 => ExifTypes::Ascii,
+                3 => ExifTypes::Short,
+                4 => ExifTypes::Long,
+                5 => ExifTypes::Rational,
+                7 => ExifTypes::Undefined,
+                9 => ExifTypes::Slong,
+                10 => ExifTypes::Srational,
+                _ => ExifTypes::Error,
+            },
+            ccount: if is_little_endian {
+                u32::from_le_bytes(count)
+            } else {
+                u32::from_be_bytes(count)
+            } as usize,
+            cvalue_offset: if is_little_endian {
+                u32::from_le_bytes(value_offset)
+            } else {
+                u32::from_be_bytes(value_offset)
+            } as usize,
         }
     }
 
-    pub fn get_tag(&self) -> usize {
-        if self.is_little_endian {
-            u16::from_le_bytes(self.tag) as usize
-        } else {
-            u16::from_be_bytes(self.tag) as usize
-        }
-    }
-
-    pub fn get_data_type(&self) -> ExifTypes {
-        match if self.is_little_endian {
-            u16::from_le_bytes(self.data_type)
-        } else {
-            u16::from_be_bytes(self.data_type)
-        } {
-            1 => ExifTypes::Byte,
-            2 => ExifTypes::Ascii,
-            3 => ExifTypes::Short,
-            4 => ExifTypes::Long,
-            5 => ExifTypes::Rational,
-            7 => ExifTypes::Undefined,
-            9 => ExifTypes::Slong,
-            10 => ExifTypes::Srational,
-            _ => ExifTypes::Error,
-        }
-    }
-
-    pub fn get_value_offset(&self) -> usize {
-        if self.is_little_endian {
-            u32::from_le_bytes(self.value_offset) as usize
-        } else {
-            u32::from_be_bytes(self.value_offset) as usize
-        }
-    }
-
-    pub fn get_value_byte(&self) -> Option<u8> {
-        if self.get_data_type() == ExifTypes::Byte {
-            return Some(self.get_byte());
+    pub fn get_value_byte(&self, slice: &[u8]) -> Option<Vec<u8>> {
+        if self.cdata_type == ExifTypes::Byte {
+            return Some(self.get_bytes(slice));
         }
         None
     }
 
     pub fn get_value_ascii(&self, slice: &[u8]) -> Option<String> {
-        if self.get_data_type() == ExifTypes::Ascii {
+        if self.cdata_type == ExifTypes::Ascii {
             return Some(self.get_ascii(slice));
         }
         None
     }
 
-    pub fn get_value_short(&self) -> Option<u16> {
-        if self.get_data_type() == ExifTypes::Short {
-            return Some(self.get_short());
+    pub fn get_value_short(&self, slice: &[u8]) -> Option<Vec<u16>> {
+        if self.cdata_type == ExifTypes::Short {
+            return Some(self.get_shorts(slice));
         }
         None
     }
 
-    pub fn get_value_long(&self) -> Option<u32> {
-        if self.get_data_type() == ExifTypes::Long {
-            return Some(self.get_long());
+    pub fn get_value_long(&self, slice: &[u8]) -> Option<Vec<u32>> {
+        if self.cdata_type == ExifTypes::Long {
+            return Some(self.get_longs(slice));
         }
         None
     }
 
-    pub fn get_value_rational(&self, slice: &[u8]) -> Option<(u32, u32)> {
-        if self.get_data_type() == ExifTypes::Rational {
-            return Some(self.get_rational(slice));
+    pub fn get_value_rational(&self, slice: &[u8]) -> Option<Vec<(u32, u32)>> {
+        if self.cdata_type == ExifTypes::Rational {
+            return Some(self.get_rationals(slice));
         }
         None
     }
 
     pub fn get_value_undefined(&self) -> Option<u8> {
-        if self.get_data_type() == ExifTypes::Undefined {
+        if self.cdata_type == ExifTypes::Undefined {
             return Some(self.get_undefined());
         }
         None
     }
 
-    pub fn get_value_slong(&self) -> Option<i32> {
-        if self.get_data_type() == ExifTypes::Slong {
-            return Some(self.get_slong());
+    pub fn get_value_slong(&self, slice: &[u8]) -> Option<Vec<i32>> {
+        if self.cdata_type == ExifTypes::Slong {
+            return Some(self.get_slongs(slice));
         }
         None
     }
 
-    pub fn get_value_srational(&self, slice: &[u8]) -> Option<(i32, i32)> {
-        if self.get_data_type() == ExifTypes::Byte {
+    pub fn get_value_srational(&self, slice: &[u8]) -> Option<Vec<(i32, i32)>> {
+        if self.cdata_type == ExifTypes::Byte {
             return Some(self.get_srational(slice));
         }
         None
     }
 
     fn get_type_as_string(&self) -> String {
-        match self.get_data_type() {
+        match self.cdata_type {
             ExifTypes::Byte => String::from("Byte"),
             ExifTypes::Ascii => String::from("Ascii"),
             ExifTypes::Short => String::from("Short"),
@@ -337,43 +343,176 @@ impl InteroperabilityField {
         }
     }
 
-    pub fn get_count(&self) -> usize {
-        if self.is_little_endian {
-            u32::from_le_bytes(self.count) as usize
-        } else {
-            u32::from_be_bytes(self.count) as usize
-        }
-    }
-
     pub fn get_value_as_string(&self, slice: &[u8]) -> String {
         // TODO: Handle cases where the value is an enum
-        let tag = Tag(self.get_tag());
-        match self.get_data_type() {
-            ExifTypes::Byte => format!("{}: {}", tag, self.get_byte()),
-            ExifTypes::Ascii => format!("{}: {}", tag, self.get_ascii(slice)),
-            ExifTypes::Short => format!("{}: {}", tag, self.get_short()),
-            ExifTypes::Long => format!("{}: {}", tag, self.get_long()),
-            ExifTypes::Rational => {
-                let rational = self.get_rational(slice);
-                format!("{}: {}/{}", tag, rational.0, rational.1)
+        let tag = Tag(self.ctag);
+        match self.cdata_type {
+            ExifTypes::Byte => {
+                format!("{}: {}", tag, self.get_vec_as_string(self.get_bytes(slice)))
             }
-            ExifTypes::Undefined => format!("{}: {}", tag, self.get_long()),
-            ExifTypes::Slong => format!("{}: {}", tag, self.get_slong()),
+            ExifTypes::Ascii => format!("{}: {}", tag, self.get_ascii(slice)),
+            ExifTypes::Short => {
+                let values = self.get_shorts(slice);
+                if tag == Tags::Compression && self.ccount == 1 && values.len() == 1 {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        if values[0] == 1 {
+                            "uncompressed"
+                        } else if values[0] == 6 {
+                            "JPEG compression (thumbnails only)"
+                        } else {
+                            "reserved"
+                        }
+                    )
+                } else if tag == Tags::PhotometricInterpretation
+                    && self.ccount == 1
+                    && values.len() == 1
+                {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        if values[0] == 2 {
+                            "RGB"
+                        } else if values[0] == 6 {
+                            "YCbCr"
+                        } else {
+                            "reserved"
+                        }
+                    )
+                } else if tag == Tags::PlanarConfiguration && self.ccount == 1 && values.len() == 1
+                {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        if values[0] == 1 {
+                            "chunky format"
+                        } else if values[0] == 2 {
+                            "planar format"
+                        } else {
+                            "reserved"
+                        }
+                    )
+                } else if tag == Tags::YCbCrSubSampling && self.ccount == 2 && values.len() == 2 {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        if values[0] == 2 && values[1] == 1 {
+                            "YCbCr4:2:2"
+                        } else if values[0] == 2 && values[1] == 2 {
+                            "YCbCr4:2:0"
+                        } else {
+                            "reserved"
+                        }
+                    )
+                } else if tag == Tags::YCbCrPositioning && self.ccount == 1 && values.len() == 1 {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        if values[0] == 1 {
+                            "centered"
+                        } else if values[0] == 2 {
+                            "co-sited"
+                        } else {
+                            "reserved"
+                        }
+                    )
+                } else if tag == Tags::ResolutionUnit && self.ccount == 1 && values.len() == 1 {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        if values[0] == 2 {
+                            "inches"
+                        } else if values[0] == 3 {
+                            "centimeters"
+                        } else {
+                            "reserved"
+                        }
+                    )
+                } else {
+                    format!("{}: {}", tag, self.get_vec_as_string(values))
+                }
+            }
+            ExifTypes::Long => {
+                format!("{}: {}", tag, self.get_vec_as_string(self.get_longs(slice)))
+            }
+            ExifTypes::Rational => {
+                format!(
+                    "{}: {}",
+                    tag,
+                    self.get_tuples_vec_as_string(self.get_rationals(slice))
+                )
+            }
+            ExifTypes::Undefined => {
+                let l = self.get_longs(slice);
+                if l.len() == 1 {
+                    format!("{}: {}", tag, self.get_vec_as_string(l))
+                } else {
+                    format!("{}: Undefined", tag)
+                }
+            }
+            ExifTypes::Slong => format!(
+                "{}: {}",
+                tag,
+                self.get_vec_as_string(self.get_slongs(slice))
+            ),
             ExifTypes::Srational => {
-                let srational = self.get_srational(slice);
-                format!("{}: {}/{}", tag, srational.0, srational.1)
+                format!(
+                    "{}: {}",
+                    tag,
+                    self.get_tuples_vec_as_string(self.get_srational(slice))
+                )
             }
             ExifTypes::Error => String::from("N/A"),
         }
     }
 
-    fn get_byte(&self) -> u8 {
-        self.value_offset[0]
+    fn get_vec_as_string<T: fmt::Display>(&self, vec: Vec<T>) -> String {
+        let mut s = String::new();
+        let len = vec.len();
+        for (i, value) in vec.iter().enumerate() {
+            if i == len - 1 {
+                s.push_str(format!("{}", value).as_str());
+            } else {
+                s.push_str(format!("{} ", value).as_str());
+            }
+        }
+
+        s
+    }
+
+    fn get_tuples_vec_as_string<T: fmt::Display>(&self, vec: Vec<(T, T)>) -> String {
+        let mut s = String::new();
+        let len = vec.len();
+        for (i, value) in vec.iter().enumerate() {
+            if i == len - 1 {
+                s.push_str(format!("{}/{}", value.0, value.1).as_str());
+            } else {
+                s.push_str(format!("{}/{} ", value.0, value.1).as_str());
+            }
+        }
+
+        s
+    }
+
+    fn get_bytes(&self, slice: &[u8]) -> Vec<u8> {
+        if self.ccount == 0 {
+            return Vec::with_capacity(0);
+        }
+
+        if self.ccount <= 4 {
+            return Vec::from_iter(self.value_offset[0..self.ccount].iter().copied());
+        }
+
+        if self.cvalue_offset + self.ccount <= slice.len() {
+            return slice[self.cvalue_offset..self.cvalue_offset + self.ccount].to_vec();
+        }
+        Vec::new()
     }
 
     fn get_ascii(&self, slice: &[u8]) -> String {
-        let start = self.get_value_offset();
-        let end = start + self.get_count();
+        let start = self.cvalue_offset;
+        let end = start + self.ccount;
 
         if start >= slice.len() || end >= slice.len() {
             return String::from("ERROR");
@@ -382,23 +521,71 @@ impl InteroperabilityField {
         String::from_iter(slice[start..end].iter().map(|b| *b as char))
     }
 
-    fn get_short(&self) -> u16 {
-        u32::from_le_bytes(self.value_offset) as u16
-    }
-
-    fn get_long(&self) -> u32 {
-        u32::from_le_bytes(self.value_offset)
-    }
-
-    fn get_rational(&self, slice: &[u8]) -> (u32, u32) {
-        let val_off = self.get_value_offset();
-        if slice.len() < val_off + 8 {
-            return (0, 0);
+    fn get_shorts(&self, slice: &[u8]) -> Vec<u16> {
+        if self.ccount == 0 {
+            return Vec::with_capacity(0);
         }
 
-        (
-            u32::from_le_bytes(slice[val_off..val_off + 4].try_into().unwrap()),
-            u32::from_le_bytes(slice[val_off + 4..val_off + 8].try_into().unwrap()),
+        if self.ccount == 1 {
+            return vec![u16::from_le_bytes(
+                self.value_offset[0..2].try_into().unwrap(),
+            )];
+        }
+        if self.ccount == 2 {
+            return vec![
+                u16::from_le_bytes(self.value_offset[0..2].try_into().unwrap()),
+                u16::from_le_bytes(self.value_offset[2..4].try_into().unwrap()),
+            ];
+        }
+
+        let end_off = self.cvalue_offset + self.ccount * 2;
+        if end_off >= slice.len() {
+            return Vec::new();
+        }
+
+        Vec::from_iter(
+            slice[self.cvalue_offset..end_off]
+                .rchunks_exact(2)
+                .map(|chunk| u16::from_le_bytes(chunk[0..2].try_into().unwrap())),
+        )
+    }
+
+    fn get_longs(&self, slice: &[u8]) -> Vec<u32> {
+        if self.ccount == 0 {
+            return Vec::with_capacity(0);
+        }
+
+        if self.ccount == 1 {
+            return vec![u32::from_le_bytes(self.value_offset)];
+        }
+
+        let end_off = self.cvalue_offset + self.ccount * 4;
+        if end_off >= slice.len() {
+            return Vec::new();
+        }
+
+        Vec::from_iter(
+            slice[self.cvalue_offset..end_off]
+                .rchunks_exact(4)
+                .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())),
+        )
+    }
+
+    fn get_rationals(&self, slice: &[u8]) -> Vec<(u32, u32)> {
+        let end_off = self.cvalue_offset + self.ccount * 8;
+        if end_off >= slice.len() {
+            return Vec::new();
+        }
+
+        Vec::from_iter(
+            slice[self.cvalue_offset..end_off]
+                .rchunks_exact(8)
+                .map(|chunk| {
+                    (
+                        u32::from_le_bytes(chunk[0..4].try_into().unwrap()),
+                        u32::from_le_bytes(chunk[4..8].try_into().unwrap()),
+                    )
+                }),
         )
     }
 
@@ -406,20 +593,42 @@ impl InteroperabilityField {
         self.value_offset[0]
     }
 
-    fn get_slong(&self) -> i32 {
-        i32::from_le_bytes(self.value_offset)
-    }
-
-    fn get_srational(&self, slice: &[u8]) -> (i32, i32) {
-        if slice.len() < self.get_value_offset() + 8 {
-            return (0, 0);
+    fn get_slongs(&self, slice: &[u8]) -> Vec<i32> {
+        if self.ccount == 0 {
+            return Vec::with_capacity(0);
         }
 
-        let val_off = self.get_value_offset();
+        if self.ccount == 1 {
+            return vec![i32::from_le_bytes(self.value_offset)];
+        }
 
-        (
-            i32::from_le_bytes(slice[val_off..val_off + 4].try_into().unwrap()),
-            i32::from_le_bytes(slice[val_off + 4..val_off + 8].try_into().unwrap()),
+        let end_off = self.cvalue_offset + self.ccount * 4;
+        if end_off >= slice.len() {
+            return Vec::new();
+        }
+
+        Vec::from_iter(
+            slice[self.cvalue_offset..end_off]
+                .rchunks_exact(4)
+                .map(|chunk| i32::from_le_bytes(chunk.try_into().unwrap())),
+        )
+    }
+
+    fn get_srational(&self, slice: &[u8]) -> Vec<(i32, i32)> {
+        let end_off = self.cvalue_offset + self.ccount * 8;
+        if end_off >= slice.len() {
+            return Vec::new();
+        }
+
+        Vec::from_iter(
+            slice[self.cvalue_offset..end_off]
+                .rchunks_exact(8)
+                .map(|chunk| {
+                    (
+                        i32::from_le_bytes(chunk[0..4].try_into().unwrap()),
+                        i32::from_le_bytes(chunk[4..8].try_into().unwrap()),
+                    )
+                }),
         )
     }
 }
@@ -447,7 +656,7 @@ impl fmt::Display for InteroperabilityField {
                     value_offset: {} {} {} {} => {}\n\t\t}}",
             self.tag[0],
             self.tag[1],
-            self.get_tag(),
+            self.ctag,
             self.data_type[0],
             self.data_type[1],
             if self.is_little_endian {
@@ -460,12 +669,12 @@ impl fmt::Display for InteroperabilityField {
             self.count[1],
             self.count[2],
             self.count[3],
-            self.get_count(),
+            self.ccount,
             self.value_offset[0],
             self.value_offset[1],
             self.value_offset[2],
             self.value_offset[3],
-            self.get_value_offset(),
+            self.cvalue_offset,
         )
     }
 }
