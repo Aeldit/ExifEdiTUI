@@ -429,6 +429,51 @@ impl InteroperabilityField {
                             "reserved"
                         }
                     )
+                } else if tag == Tags::ColorSpace && self.ccount == 1 && values.len() == 1 {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        if values[0] == 1 {
+                            "sRGB"
+                        } else if values[0] == 0xFFFF {
+                            "Uncalibrated"
+                        } else {
+                            "reserved"
+                        }
+                    )
+                } else if tag == Tags::ExposureProgram && self.ccount == 1 && values.len() == 1 {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        match values[0] {
+                            0 => "Not defined",
+                            1 => "Manual",
+                            2 => "Normal program",
+                            3 => "Aperture priority",
+                            4 => "Shutter priority",
+                            5 => "Creative program (biased toward depth of field)",
+                            6 => "Action program (biased toward fast shutter speed)",
+                            7 => "Portrait mode (for closeup photos with the background out of focus)",
+                            8 => "Landscape mode (for landscape photos with the background in focus)",
+                            _ => "reserved",
+                        }
+                    )
+                } else if tag == Tags::SensitivityType && self.ccount == 1 && values.len() == 1 {
+                    format!(
+                        "{}: {}",
+                        tag,
+                        match values[0] {
+                            0 => "Unknown",
+                            1 => "Standard output sensitivity (SOS)",
+                            2 => "Recommended exposure index (REI)",
+                            3 => "ISO speed",
+                            4 => "Standard output sensitivity (SOS) and recommended exposure index (REI)",
+                            5 => "Standard output sensitivity (SOS) and ISO speed",
+                            6 => "Recommended exposure index (REI) and ISO speed",
+                            7 => "Standard output sensitivity (SOS) and recommended exposure index (REI) and ISO speed",
+                            _ => "reserved",
+                        }
+                    )
                 } else {
                     format!("{}: {}", tag, self.get_vec_as_string(values))
                 }
@@ -440,13 +485,58 @@ impl InteroperabilityField {
                 format!(
                     "{}: {}",
                     tag,
-                    self.get_tuples_vec_as_string(self.get_rationals(slice))
+                    self.get_ratioanls_vec_as_string(self.get_rationals(slice))
                 )
             }
             ExifTypes::Undefined => {
-                let l = self.get_longs(slice);
-                if l.len() == 1 {
-                    format!("{}: {}", tag, self.get_vec_as_string(l))
+                if tag == Tags::ExifVersion && self.ccount == 4 {
+                    format!(
+                        "{}: {:?}",
+                        tag,
+                        String::from_iter(self.value_offset.iter().map(|b| *b as char))
+                    )
+                } else if tag == Tags::FlashpixVersion
+                    && self.ccount == 4
+                    && self.value_offset[0] == 48
+                    && self.value_offset[1] == 49
+                    && self.value_offset[2] == 48
+                    && self.value_offset[3] == 48
+                {
+                    format!("{}: Flashpix Format Version 1.0", tag)
+                } else if tag == Tags::ComponentsConfiguration && self.ccount == 4 {
+                    format!(
+                        "{}: {}{}{}",
+                        tag,
+                        match self.value_offset[0] {
+                            1 => "Y",
+                            2 => "Cb",
+                            3 => "Cr",
+                            4 => "R",
+                            5 => "G",
+                            6 => "B",
+                            _ => "",
+                        },
+                        match self.value_offset[1] {
+                            1 => "Y",
+                            2 => "Cb",
+                            3 => "Cr",
+                            4 => "R",
+                            5 => "G",
+                            6 => "B",
+                            _ => "",
+                        },
+                        match self.value_offset[2] {
+                            1 => "Y",
+                            2 => "Cb",
+                            3 => "Cr",
+                            4 => "R",
+                            5 => "G",
+                            6 => "B",
+                            _ => "",
+                        }
+                    )
+                } else if tag == Tags::OECF {
+                    todo!() // TODO:
                 } else {
                     format!("{}: Undefined", tag)
                 }
@@ -460,7 +550,7 @@ impl InteroperabilityField {
                 format!(
                     "{}: {}",
                     tag,
-                    self.get_tuples_vec_as_string(self.get_srational(slice))
+                    self.get_ratioanls_vec_as_string(self.get_srational(slice))
                 )
             }
             ExifTypes::Error => String::from("N/A"),
@@ -481,7 +571,7 @@ impl InteroperabilityField {
         s
     }
 
-    fn get_tuples_vec_as_string<T: fmt::Display>(&self, vec: Vec<(T, T)>) -> String {
+    fn get_ratioanls_vec_as_string<T: fmt::Display>(&self, vec: Vec<(T, T)>) -> String {
         let mut s = String::new();
         let len = vec.len();
         for (i, value) in vec.iter().enumerate() {
