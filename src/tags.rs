@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::arrays::get_vec_as_string;
+use crate::arrays::{get_tuples_vec_as_string, get_vec_as_string};
 
 #[derive(PartialEq)]
 pub struct Tag(pub usize);
@@ -516,9 +516,182 @@ pub fn get_short_string_for_tag(tag: Tag, count: usize, values: Vec<u16>) -> Str
             }
         )
     } else if tag == Tags::Flash && count == 1 && values.len() == 1 {
-        format!("{}: ", tag)
+        let v = values[0];
+        format!(
+            "{}: {} / {} / {} / {} / {}",
+            tag,
+            if v & (1 << 0) == (1 << 0) {
+                "Flash fired"
+            } else {
+                "Flash did not fire"
+            },
+            if v & 2 == 0 && v & 3 == 0 {
+                "No strobe return detection function"
+            } else if v & (1 << 1) == 0 && v & (1 << 2) == (1 << 2) {
+                "reserved"
+            } else if v & (1 << 1) == (1 << 1) && v & (1 << 2) == 0 {
+                "Strobe return light not detected"
+            } else {
+                "Strobe return light detected"
+            },
+            if v & (1 << 3) == 0 && v & (1 << 4) == 0 {
+                "unknown"
+            } else if v & (1 << 3) == 0 && v & (1 << 4) == (1 << 4) {
+                "Compulsory flash firing"
+            } else if v & (1 << 3) == (1 << 3) && v & (1 << 4) == 0 {
+                "Compulsory flash suppression"
+            } else {
+                "Auto mode"
+            },
+            if v & (1 << 5) == (1 << 5) {
+                "No flash function"
+            } else {
+                "Flash function present"
+            },
+            if v & (1 << 6) == (1 << 6) {
+                "Red-eye reduction supported"
+            } else {
+                "No red-eye reduction mode or unknown"
+            },
+        )
+    } else if tag == Tags::SensingMethod && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                1 => "Not defined",
+                2 => "One-chip color area sensor",
+                3 => "Two-chip color area sensor",
+                4 => "Three-chip color area sensor",
+                5 => "Color sequential area sensor",
+                7 => "Trilinear sensor",
+                8 => "Color sequential linear sensor",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::CustomRendered && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "Normal process",
+                1 => "Custom process",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::ExposureMode && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "Auto exposure",
+                1 => "Manual exposure",
+                2 => "Auto bracket",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::WhiteBalance && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "Auto white balance",
+                1 => "Manual white balance",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::SceneCaptureType && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "Standard",
+                1 => "Landscape",
+                2 => "Portrait",
+                3 => "Night scene",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::GainControl && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "None",
+                1 => "Low gain up",
+                2 => "High gain up",
+                3 => "Low gain down",
+                4 => "High gain down",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::Contrast && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "Normal",
+                1 => "Soft",
+                2 => "Hard",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::Saturation && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "Normal",
+                1 => "Low saturation",
+                2 => "High saturation",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::Sharpness && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "Normal",
+                1 => "Soft",
+                2 => "Hard",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::SubjectDistanceRange && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "unknown",
+                1 => "Macro",
+                2 => "Close view",
+                3 => "Distant view",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::CompositeImage && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "unknown",
+                1 => "non-composite image",
+                2 => "General composite image",
+                3 => "Composite image captured when shooting",
+                _ => "reserved",
+            }
+        )
     } else {
         format!("{}: {}", tag, get_vec_as_string(values))
+    }
+}
+
+pub fn get_rational_string_for_tag(tag: Tag, count: usize, values: Vec<(u32, u32)>) -> String {
+    if tag == Tags::LensSpecification && count == 4 && values.len() == 4 {
+        format!("{}: {}", tag, "TODO")
+    } else {
+        format!("{}: {}", tag, get_tuples_vec_as_string(values))
     }
 }
 
@@ -571,6 +744,28 @@ pub fn get_undefined_string_for_tag(tag: Tag, count: usize, value_offset: [u8; 4
         )
     } else if tag == Tags::OECF {
         todo!() // TODO:
+    } else if tag == Tags::FileSource && count == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match value_offset[0] {
+                0 => "others",
+                1 => "scanner of transparent type",
+                2 => "scanner of reflex type",
+                3 => "DSC",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::SceneType && count == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            if value_offset[0] == 1 {
+                "A directly photographed image"
+            } else {
+                "reserved"
+            }
+        )
     } else {
         format!("{}: Undefined", tag)
     }

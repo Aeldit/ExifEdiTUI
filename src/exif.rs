@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::tags::{get_short_string_for_tag, get_undefined_string_for_tag, Tag};
 
-use crate::arrays::{get_ratioanls_vec_as_string, get_vec_as_string};
+use crate::arrays::{get_tuples_vec_as_string, get_vec_as_string};
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
@@ -363,7 +363,7 @@ impl InteroperabilityField {
                 format!(
                     "{}: {}",
                     tag,
-                    get_ratioanls_vec_as_string(self.get_rationals(slice))
+                    get_tuples_vec_as_string(self.get_rationals(slice))
                 )
             }
             ExifTypes::Undefined => {
@@ -374,7 +374,7 @@ impl InteroperabilityField {
                 format!(
                     "{}: {}",
                     tag,
-                    get_ratioanls_vec_as_string(self.get_srational(slice))
+                    get_tuples_vec_as_string(self.get_srational(slice))
                 )
             }
             ExifTypes::Error => String::from("N/A"),

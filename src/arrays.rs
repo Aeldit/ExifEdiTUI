@@ -32,7 +32,7 @@ pub fn get_vec_as_string<T: fmt::Display>(vec: Vec<T>) -> String {
     s
 }
 
-pub fn get_ratioanls_vec_as_string<T: fmt::Display>(vec: Vec<(T, T)>) -> String {
+pub fn get_tuples_vec_as_string<T: fmt::Display>(vec: Vec<(T, T)>) -> String {
     let mut s = String::new();
     let len = vec.len();
     for (i, value) in vec.iter().enumerate() {
