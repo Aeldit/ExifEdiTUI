@@ -1,8 +1,8 @@
-# ExifEdiTUI
+# ExifEdiTUI (WIP)
 
 Edit Exif data, inside a TUI.
 
-## TODO (WIP)
+## TODO
 
 - [ ] TUI
 - [ ] Support multiple image formats:
