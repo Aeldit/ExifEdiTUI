@@ -11,7 +11,7 @@ pub mod Tags {
     // Special IFDs
     pub const ExifOffset: Tag = Tag(34665);
     pub const GPSOffset: Tag = Tag(34853);
-    pub const Interoperability: Tag = Tag(40965);
+    pub const InteroperabilityIFD: Tag = Tag(40965);
 
     // TIFF
     // Image Data Structure
@@ -198,6 +198,8 @@ impl fmt::Display for Tag {
             "{}",
             match *self {
                 Tags::ExifOffset => "ExifOffset",
+                Tags::GPSOffset => "GPSOffset",
+                Tags::InteroperabilityIFD => "InteroperabilityIFD",
                 Tags::ImageWidth => "ImageWidth",
                 Tags::ImageLength => "ImageLength",
                 Tags::BitsPerSample => "BitsPerSample",
