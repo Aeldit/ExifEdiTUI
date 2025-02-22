@@ -351,6 +351,135 @@ impl fmt::Display for Tag {
     }
 }
 
+pub fn get_byte_string_for_tag(tag: Tag, count: usize, values: Vec<u8>) -> String {
+    if tag == Tags::GPSVersionID && count == 4 && values.len() == 4 {
+        format!(
+            "{}: {}",
+            tag,
+            if values[0] == 2 && values[1] == 3 && values[2] == 0 && values[3] == 0 {
+                "Version 2.3"
+            } else {
+                "reserved"
+            }
+        )
+    } else if tag == Tags::GPSAltitudeRef && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "Sea level",
+                1 => "Sea level reference (negative value)",
+                _ => "reserved",
+            }
+        )
+    } else {
+        format!("{}: {}", tag, get_vec_as_string(values))
+    }
+}
+
+pub fn get_ascii_string_for_tag(tag: Tag, count: usize, s: String) -> String {
+    if tag == Tags::GPSLatitudeRef && count == 2 && s.len() >= 2 {
+        format!(
+            "{}: {}",
+            tag,
+            match s.as_str() {
+                "N" => "North latitude",
+                "S" => "South latitude",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::GPSLongitudeRef && count == 2 && s.len() >= 2 {
+        format!(
+            "{}: {}",
+            tag,
+            match s.as_str() {
+                "E" => "East longitude",
+                "W" => "West longitude",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::GPSStatus && count == 2 && s.len() >= 2 {
+        format!(
+            "{}: {}",
+            tag,
+            match s.as_str() {
+                "A" => "Measurement in progress",
+                "V" => "Measurement interrupted",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::GPSMeasureMode && count == 2 && s.len() >= 2 {
+        format!(
+            "{}: {}",
+            tag,
+            match s.as_str() {
+                "2" => "2-dimensional measurement",
+                "3" => "3-dimensional measurement",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::GPSSpeedRef && count == 2 && s.len() >= 2 {
+        format!(
+            "{}: {}",
+            tag,
+            match s.as_str() {
+                "K" => "Kilometers per hour",
+                "M" => "Miles per hour",
+                "N" => "Knots",
+                _ => "reserved",
+            }
+        )
+    } else if (tag == Tags::GPSTrackRef
+        || tag == Tags::GPSImgDirectionRef
+        || tag == Tags::GPSDestBearingRef)
+        && count == 2
+        && s.len() >= 2
+    {
+        format!(
+            "{}: {}",
+            tag,
+            match s.as_str() {
+                "T" => "True direction",
+                "M" => "Magnetic direction",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::GPSDestLatitudeRef && count == 2 && s.len() >= 2 {
+        format!(
+            "{}: {}",
+            tag,
+            match s.as_str() {
+                "N" => "North latitude",
+                "S" => "South latitude",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::GPSDestLongitudeRef && count == 2 && s.len() >= 2 {
+        format!(
+            "{}: {}",
+            tag,
+            match s.as_str() {
+                "E" => "East longitude",
+                "W" => "West longitude",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::GPSDestDistanceRef && count == 2 && s.len() >= 2 {
+        format!(
+            "{}: {}",
+            tag,
+            match s.as_str() {
+                "K" => "Kilometers",
+                "M" => "Miles",
+                "N" => "Nautical miles",
+                _ => "reserved",
+            }
+        )
+    } else {
+        format!("{}: {}", tag, s)
+    }
+}
+
 pub fn get_short_string_for_tag(tag: Tag, count: usize, values: Vec<u16>) -> String {
     if tag == Tags::Compression && count == 1 && values.len() == 1 {
         format!(
@@ -679,6 +808,16 @@ pub fn get_short_string_for_tag(tag: Tag, count: usize, values: Vec<u16>) -> Str
                 1 => "non-composite image",
                 2 => "General composite image",
                 3 => "Composite image captured when shooting",
+                _ => "reserved",
+            }
+        )
+    } else if tag == Tags::GPSDifferential && count == 1 && values.len() == 1 {
+        format!(
+            "{}: {}",
+            tag,
+            match values[0] {
+                0 => "Measurement without differential correction",
+                1 => "Differential correction applied",
                 _ => "reserved",
             }
         )

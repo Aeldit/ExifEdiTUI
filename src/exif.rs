@@ -1,6 +1,9 @@
 use core::fmt;
 
-use crate::tags::{get_short_string_for_tag, get_undefined_string_for_tag, Tag};
+use crate::tags::{
+    get_ascii_string_for_tag, get_byte_string_for_tag, get_short_string_for_tag,
+    get_undefined_string_for_tag, Tag,
+};
 
 use crate::arrays::{get_tuples_vec_as_string, get_vec_as_string};
 
@@ -348,10 +351,8 @@ impl InteroperabilityField {
     pub fn get_value_as_string(&self, slice: &[u8]) -> String {
         let tag = Tag(self.ctag);
         match self.cdata_type {
-            ExifTypes::Byte => {
-                format!("{}: {}", tag, get_vec_as_string(self.get_bytes(slice)))
-            }
-            ExifTypes::Ascii => format!("{}: {}", tag, self.get_ascii(slice)),
+            ExifTypes::Byte => get_byte_string_for_tag(tag, self.ccount, self.get_bytes(slice)),
+            ExifTypes::Ascii => get_ascii_string_for_tag(tag, self.ccount, self.get_ascii(slice)),
             ExifTypes::Short => {
                 let values = self.get_shorts(slice);
                 get_short_string_for_tag(tag, self.ccount, values)
