@@ -367,9 +367,13 @@ impl InteroperabilityField {
                     get_tuples_vec_as_string(self.get_rationals(slice))
                 )
             }
-            ExifTypes::Undefined => {
-                get_undefined_string_for_tag(tag, self.ccount, self.value_offset)
-            }
+            ExifTypes::Undefined => get_undefined_string_for_tag(
+                tag,
+                self.ccount,
+                self.value_offset,
+                self.cvalue_offset,
+                slice,
+            ),
             ExifTypes::Slong => format!("{}: {}", tag, get_vec_as_string(self.get_slongs(slice))),
             ExifTypes::Srational => {
                 format!(

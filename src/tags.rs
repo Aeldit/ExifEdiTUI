@@ -834,7 +834,13 @@ pub fn get_rational_string_for_tag(tag: Tag, count: usize, values: Vec<(u32, u32
     }
 }
 
-pub fn get_undefined_string_for_tag(tag: Tag, count: usize, value_offset: [u8; 4]) -> String {
+pub fn get_undefined_string_for_tag(
+    tag: Tag,
+    count: usize,
+    value_offset: [u8; 4],
+    cvalue_offset: usize,
+    slice: &[u8],
+) -> String {
     if tag == Tags::ExifVersion && count == 4 {
         format!(
             "{}: {:?}",
@@ -905,6 +911,18 @@ pub fn get_undefined_string_for_tag(tag: Tag, count: usize, value_offset: [u8; 4
                 "reserved"
             }
         )
+    } else if tag == Tags::MakerNote {
+        let end_off = cvalue_offset + count;
+        if end_off >= slice.len() {
+            format!("{}: ERROR", tag)
+        } else {
+            // See https://exiftool.org/makernote_types.html
+            // TODO:
+            format!("{}: TODO", tag)
+        }
+    } else if tag == Tags::UserComment {
+        // TODO:
+        format!("{}: TODO", tag)
     } else {
         format!("{}: Undefined", tag)
     }
