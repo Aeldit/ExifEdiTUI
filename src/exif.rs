@@ -1,20 +1,92 @@
 use core::fmt;
 
+use crate::formats::ImageFormat;
 use crate::tags::{
     get_ascii_string_for_tag, get_byte_string_for_tag, get_short_string_for_tag,
-    get_undefined_string_for_tag, Tag,
+    get_undefined_string_for_tag, Tag, Tags,
 };
 
-use crate::arrays::{get_tuples_vec_as_string, get_vec_as_string};
+use crate::arrays::{get_tuples_vec_as_string, get_vec_as_string, index_of_sub_array};
 
 // In bytes
 pub const TIFF_HEADER_SIZE: usize = 8;
 pub const INTEROPERABILITY_FIELD_SIZE: usize = 12;
 
-/*pub enum MagicBytes {
-    Png(),
-    Jpeg(),
-}*/
+pub struct ExifImage {
+    //image_format: ImageFormat,
+    tiff: TIFFHeader,
+    ifd_0: IFD,
+    ifd_exif: IFD,
+    ifd_gps: IFD,
+    //ifd_1: IFD,
+    slice: Vec<u8>,
+}
+
+impl ExifImage {
+    pub fn from(img_contents: Vec<u8>, img_format: ImageFormat) -> Self {
+        let exif_identifier_code = match img_format {
+            ImageFormat::Jpeg => vec![0x45, 0x78, 0x69, 0x66], // Exif
+            ImageFormat::Png => vec![0x65, 0x58, 0x49, 0x66],  // eXIf
+        };
+        let exif_chunk_start =
+            match index_of_sub_array(img_contents.clone(), exif_identifier_code.clone()) {
+                Some(magic_start) => {
+                    magic_start
+                        + exif_identifier_code.len()
+                        + if img_format == ImageFormat::Jpeg {
+                            2
+                        } else {
+                            0
+                        }
+                }
+                None => panic!("Couldn't get the start of the exif chunk"),
+            };
+        let tiff = TIFFHeader::from(
+            img_contents[exif_chunk_start..exif_chunk_start + TIFF_HEADER_SIZE].as_ref(),
+        );
+        let is_little_endian = tiff.is_little_endian;
+
+        let ifd_0_start = exif_chunk_start + TIFF_HEADER_SIZE + tiff.zero_th_ifd_offset as usize;
+        println!("{}", tiff.zero_th_ifd_offset);
+        let ifd_0 = IFD::from(img_contents[ifd_0_start..].as_ref(), is_little_endian);
+
+        let ifd_exif_start = match ifd_0.get_offset_for_tag(Tags::ExifOffset) {
+            Some(idf_exif_start) => exif_chunk_start + idf_exif_start,
+            None => panic!("Exif IFD start not found"),
+        };
+        let ifd_exif = IFD::from(img_contents[ifd_exif_start..].as_ref(), is_little_endian);
+
+        let ifd_gps_start = match ifd_0.get_offset_for_tag(Tags::GPSOffset) {
+            Some(idf_gps_start) => exif_chunk_start + idf_gps_start,
+            None => panic!("GPS IFD start not found"),
+        };
+        let ifd_gps = IFD::from(img_contents[ifd_gps_start..].as_ref(), is_little_endian);
+
+        Self {
+            tiff,
+            ifd_0,
+            ifd_exif,
+            ifd_gps,
+            slice: Vec::from(img_contents[exif_chunk_start..].as_ref()),
+        }
+    }
+
+    pub fn get_infos_as_string(&self) -> String {
+        format!(
+            "{}\n{}\n{}\n{}\n",
+            self.tiff.get_as_string(),
+            self.ifd_0.get_as_string(),
+            self.ifd_exif.get_as_string(),
+            self.ifd_gps.get_as_string(),
+        )
+    }
+
+    pub fn print_all_tags(&self) {
+        self.ifd_0.print_all_tags(self.slice.as_slice());
+        self.ifd_exif.print_all_tags(self.slice.as_slice());
+        self.ifd_gps.print_all_tags(self.slice.as_slice());
+    }
+}
 
 #[derive(PartialEq)]
 pub enum ExifTypes {
@@ -37,10 +109,13 @@ pub enum IFDTypes {
 }
 
 pub struct TIFFHeader {
-    byte_order: [u8; 2],
-    // Not used but in the spec
+    // We will need them later, when the editing is implemented
+    // byte_order: [u8; 2],
     // fixed: [u8; 2],
-    ifd_offset: [u8; 4], // If = 8 => followed directly by the 0th IFD
+    // ifd_offset: [u8; 4], // If = 8 => followed directly by the 0th IFD
+    // Not in the spec
+    pub is_little_endian: bool,
+    pub zero_th_ifd_offset: u32,
 }
 
 impl TIFFHeader {
@@ -53,46 +128,30 @@ impl TIFFHeader {
             );
         }
 
-        Self {
-            byte_order: slice[0..2].try_into().unwrap(),
-            ifd_offset: slice[4..8].try_into().unwrap(),
-        }
-    }
-
-    pub fn is_little_endian(&self) -> bool {
-        self.byte_order == [0x49, 0x49]
-    }
-
-    pub fn get_0th_idf_offset(&self) -> u32 {
-        let off = if self.is_little_endian() {
-            u32::from_le_bytes(self.ifd_offset)
+        let byte_order: [u8; 2] = slice[0..2].try_into().unwrap();
+        let ifd_offset = slice[4..8].try_into().unwrap();
+        let is_little_endian = byte_order == [0x49, 0x49];
+        let off = if is_little_endian {
+            u32::from_le_bytes(ifd_offset)
         } else {
-            u32::from_be_bytes(self.ifd_offset)
+            u32::from_be_bytes(ifd_offset)
         };
 
-        if off == 8 {
-            0
-        } else {
-            off
+        Self {
+            is_little_endian,
+            zero_th_ifd_offset: if off == 8 { 0 } else { off },
         }
     }
 
     pub fn get_as_string(&self) -> String {
         format!(
             "TIFF {{ Byte Order: {}, 0th IFD offset: {} }}",
-            if self.is_little_endian() {
+            if self.is_little_endian {
                 "Little endian (II)"
             } else {
                 "Big endian (MM)"
             },
-            {
-                let off = self.get_0th_idf_offset();
-                if off == 8 {
-                    0
-                } else {
-                    off
-                }
-            }
+            self.zero_th_ifd_offset,
         )
     }
 }
@@ -141,6 +200,10 @@ impl IFD {
             interoperability_arrays: interoperatibility_array,
             is_little_endian,
         }
+    }
+
+    pub fn get_interops(&self) -> &Vec<InteroperabilityField> {
+        &self.interoperability_arrays
     }
 
     fn get_array_as_string(&self) -> String {
@@ -413,53 +476,47 @@ impl InteroperabilityField {
     }
 
     fn get_shorts(&self, slice: &[u8]) -> Vec<u16> {
-        if self.ccount == 0 {
-            return Vec::with_capacity(0);
-        }
-
-        if self.ccount == 1 {
-            return vec![u16::from_le_bytes(
+        match self.ccount {
+            0 => Vec::with_capacity(0),
+            1 => vec![u16::from_le_bytes(
                 self.value_offset[0..2].try_into().unwrap(),
-            )];
-        }
-        if self.ccount == 2 {
-            return vec![
+            )],
+            2 => vec![
                 u16::from_le_bytes(self.value_offset[0..2].try_into().unwrap()),
                 u16::from_le_bytes(self.value_offset[2..4].try_into().unwrap()),
-            ];
-        }
+            ],
+            _ => {
+                let end_off = self.cvalue_offset + self.ccount * 2;
+                if end_off >= slice.len() {
+                    return Vec::new();
+                }
 
-        let end_off = self.cvalue_offset + self.ccount * 2;
-        if end_off >= slice.len() {
-            return Vec::new();
+                Vec::from_iter(
+                    slice[self.cvalue_offset..end_off]
+                        .rchunks_exact(2)
+                        .map(|chunk| u16::from_le_bytes(chunk[0..2].try_into().unwrap())),
+                )
+            }
         }
-
-        Vec::from_iter(
-            slice[self.cvalue_offset..end_off]
-                .rchunks_exact(2)
-                .map(|chunk| u16::from_le_bytes(chunk[0..2].try_into().unwrap())),
-        )
     }
 
     fn get_longs(&self, slice: &[u8]) -> Vec<u32> {
-        if self.ccount == 0 {
-            return Vec::with_capacity(0);
-        }
+        match self.ccount {
+            0 => Vec::with_capacity(0),
+            1 => vec![u32::from_le_bytes(self.value_offset)],
+            _ => {
+                let end_off = self.cvalue_offset + self.ccount * 4;
+                if end_off >= slice.len() {
+                    return Vec::new();
+                }
 
-        if self.ccount == 1 {
-            return vec![u32::from_le_bytes(self.value_offset)];
+                Vec::from_iter(
+                    slice[self.cvalue_offset..end_off]
+                        .rchunks_exact(4)
+                        .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())),
+                )
+            }
         }
-
-        let end_off = self.cvalue_offset + self.ccount * 4;
-        if end_off >= slice.len() {
-            return Vec::new();
-        }
-
-        Vec::from_iter(
-            slice[self.cvalue_offset..end_off]
-                .rchunks_exact(4)
-                .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap())),
-        )
     }
 
     fn get_rationals(&self, slice: &[u8]) -> Vec<(u32, u32)> {
@@ -485,24 +542,22 @@ impl InteroperabilityField {
     }
 
     fn get_slongs(&self, slice: &[u8]) -> Vec<i32> {
-        if self.ccount == 0 {
-            return Vec::with_capacity(0);
-        }
+        match self.ccount {
+            0 => Vec::with_capacity(0),
+            1 => vec![i32::from_le_bytes(self.value_offset)],
+            _ => {
+                let end_off = self.cvalue_offset + self.ccount * 4;
+                if end_off >= slice.len() {
+                    return Vec::new();
+                }
 
-        if self.ccount == 1 {
-            return vec![i32::from_le_bytes(self.value_offset)];
+                Vec::from_iter(
+                    slice[self.cvalue_offset..end_off]
+                        .rchunks_exact(4)
+                        .map(|chunk| i32::from_le_bytes(chunk.try_into().unwrap())),
+                )
+            }
         }
-
-        let end_off = self.cvalue_offset + self.ccount * 4;
-        if end_off >= slice.len() {
-            return Vec::new();
-        }
-
-        Vec::from_iter(
-            slice[self.cvalue_offset..end_off]
-                .rchunks_exact(4)
-                .map(|chunk| i32::from_le_bytes(chunk.try_into().unwrap())),
-        )
     }
 
     fn get_srational(&self, slice: &[u8]) -> Vec<(i32, i32)> {
