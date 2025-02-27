@@ -30,7 +30,7 @@ fn is_jpeg(slice: &[u8]) -> bool {
             ]
             .as_ref(),
         )
-        || (slice.len() >= 12
+        || (slice.len() >= 13
             && slice.starts_with(vec![0xFF, 0xD8, 0xFF, 0xE1].as_ref())
             && slice[6..13].starts_with(vec![0x45, 0x78, 0x69, 0x66, 0x00, 0x00].as_ref()))
         || slice.starts_with(vec![0xFF, 0xD8, 0xFF, 0xE0].as_ref())
