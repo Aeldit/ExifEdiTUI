@@ -47,7 +47,6 @@ impl ExifImage {
         let is_little_endian = tiff.is_little_endian;
 
         let ifd_0_start = exif_chunk_start + TIFF_HEADER_SIZE + tiff.zero_th_ifd_offset as usize;
-        println!("{}", tiff.zero_th_ifd_offset);
         let ifd_0 = IFD::from(img_contents[ifd_0_start..].as_ref(), is_little_endian);
 
         let ifd_exif_start = match ifd_0.get_offset_for_tag(Tags::ExifOffset) {
@@ -82,9 +81,17 @@ impl ExifImage {
     }
 
     pub fn print_all_tags(&self) {
-        self.ifd_0.print_all_tags(self.slice.as_slice());
-        self.ifd_exif.print_all_tags(self.slice.as_slice());
-        self.ifd_gps.print_all_tags(self.slice.as_slice());
+        let tags_and_values = [
+            self.ifd_0.get_all_tags(self.slice.as_slice()),
+            self.ifd_exif.get_all_tags(self.slice.as_slice()),
+            self.ifd_gps.get_all_tags(self.slice.as_slice()),
+        ]
+        .concat();
+        if let Some(max_len) = tags_and_values.iter().map(|split| split.0.len()).max() {
+            for s in tags_and_values.iter() {
+                println!("{}{}: {}", s.0, " ".repeat(max_len - s.0.len()), s.1);
+            }
+        };
     }
 }
 
@@ -266,10 +273,16 @@ impl IFD {
         }
     }
 
-    pub fn print_all_tags(&self, slice: &[u8]) {
-        for interop in &self.interoperability_arrays {
-            println!("{}", interop.get_value_as_string(slice))
-        }
+    pub fn get_all_tags(&self, slice: &[u8]) -> Vec<(String, String)> {
+        self.interoperability_arrays
+            .iter()
+            .map(|interop| {
+                (
+                    format!("{}", Tag(interop.ctag)),
+                    interop.get_value_as_string(slice),
+                )
+            })
+            .collect()
     }
 }
 
@@ -413,23 +426,18 @@ impl InteroperabilityField {
 
     pub fn get_value_as_string(&self, slice: &[u8]) -> String {
         let tag = Tag(self.ctag);
+
         match self.cdata_type {
             ExifTypes::Byte => get_byte_string_for_tag(tag, self.ccount, self.get_bytes(slice)),
-            ExifTypes::Ascii => get_ascii_string_for_tag(tag, self.ccount, self.get_ascii(slice)),
+            ExifTypes::Ascii => {
+                get_ascii_string_for_tag(tag, self.ccount, self.get_ascii(slice).as_str())
+            }
             ExifTypes::Short => {
                 let values = self.get_shorts(slice);
                 get_short_string_for_tag(tag, self.ccount, values)
             }
-            ExifTypes::Long => {
-                format!("{}: {}", tag, get_vec_as_string(self.get_longs(slice)))
-            }
-            ExifTypes::Rational => {
-                format!(
-                    "{}: {}",
-                    tag,
-                    get_tuples_vec_as_string(self.get_rationals(slice))
-                )
-            }
+            ExifTypes::Long => get_vec_as_string(self.get_longs(slice)),
+            ExifTypes::Rational => get_tuples_vec_as_string(self.get_rationals(slice)),
             ExifTypes::Undefined => get_undefined_string_for_tag(
                 tag,
                 self.ccount,
@@ -437,14 +445,8 @@ impl InteroperabilityField {
                 self.cvalue_offset,
                 slice,
             ),
-            ExifTypes::Slong => format!("{}: {}", tag, get_vec_as_string(self.get_slongs(slice))),
-            ExifTypes::Srational => {
-                format!(
-                    "{}: {}",
-                    tag,
-                    get_tuples_vec_as_string(self.get_srational(slice))
-                )
-            }
+            ExifTypes::Slong => get_vec_as_string(self.get_slongs(slice)),
+            ExifTypes::Srational => get_tuples_vec_as_string(self.get_srational(slice)),
             ExifTypes::Error => String::from("N/A"),
         }
     }

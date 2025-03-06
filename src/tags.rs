@@ -353,302 +353,87 @@ impl fmt::Display for Tag {
 
 pub fn get_byte_string_for_tag(tag: Tag, count: usize, values: Vec<u8>) -> String {
     if tag == Tags::GPSVersionID && count == 4 && values.len() == 4 {
-        format!(
-            "{}: {}",
-            tag,
-            if values[0] == 2 && values[1] == 3 && values[2] == 0 && values[3] == 0 {
-                "Version 2.3"
-            } else {
-                "reserved"
-            }
-        )
+        if values[0] == 2 && values[1] == 3 && values[2] == 0 && values[3] == 0 {
+            "Version 2.3"
+        } else {
+            "reserved"
+        }
+        .to_string()
     } else if tag == Tags::GPSAltitudeRef && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
-                0 => "Sea level",
-                1 => "Sea level reference (negative value)",
-                _ => "reserved",
-            }
-        )
+        match values[0] {
+            0 => "Sea level",
+            1 => "Sea level reference (negative value)",
+            _ => "reserved",
+        }
+        .to_string()
     } else {
-        format!("{}: {}", tag, get_vec_as_string(values))
+        get_vec_as_string(values)
     }
 }
 
-pub fn get_ascii_string_for_tag(tag: Tag, count: usize, s: String) -> String {
-    if tag == Tags::GPSLatitudeRef && count == 2 && s.len() >= 2 {
-        format!(
-            "{}: {}",
-            tag,
-            match s.as_str() {
+pub fn get_ascii_string_for_tag(tag: Tag, count: usize, s: &str) -> String {
+    if count == 2 && s.len() >= 2 {
+        match tag {
+            Tags::GPSLatitudeRef => match s {
                 "N" => "North latitude",
                 "S" => "South latitude",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::GPSLongitudeRef && count == 2 && s.len() >= 2 {
-        format!(
-            "{}: {}",
-            tag,
-            match s.as_str() {
+            },
+            Tags::GPSLongitudeRef => match s {
                 "E" => "East longitude",
                 "W" => "West longitude",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::GPSStatus && count == 2 && s.len() >= 2 {
-        format!(
-            "{}: {}",
-            tag,
-            match s.as_str() {
+            },
+            Tags::GPSStatus => match s {
                 "A" => "Measurement in progress",
                 "V" => "Measurement interrupted",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::GPSMeasureMode && count == 2 && s.len() >= 2 {
-        format!(
-            "{}: {}",
-            tag,
-            match s.as_str() {
+            },
+            Tags::GPSMeasureMode => match s {
                 "2" => "2-dimensional measurement",
                 "3" => "3-dimensional measurement",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::GPSSpeedRef && count == 2 && s.len() >= 2 {
-        format!(
-            "{}: {}",
-            tag,
-            match s.as_str() {
+            },
+            Tags::GPSSpeedRef => match s {
                 "K" => "Kilometers per hour",
                 "M" => "Miles per hour",
                 "N" => "Knots",
                 _ => "reserved",
-            }
-        )
-    } else if (tag == Tags::GPSTrackRef
-        || tag == Tags::GPSImgDirectionRef
-        || tag == Tags::GPSDestBearingRef)
-        && count == 2
-        && s.len() >= 2
-    {
-        format!(
-            "{}: {}",
-            tag,
-            match s.as_str() {
+            },
+            Tags::GPSTrackRef | Tags::GPSImgDirectionRef | Tags::GPSDestBearingRef => match s {
                 "T" => "True direction",
                 "M" => "Magnetic direction",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::GPSDestLatitudeRef && count == 2 && s.len() >= 2 {
-        format!(
-            "{}: {}",
-            tag,
-            match s.as_str() {
+            },
+            Tags::GPSDestLatitudeRef => match s {
                 "N" => "North latitude",
                 "S" => "South latitude",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::GPSDestLongitudeRef && count == 2 && s.len() >= 2 {
-        format!(
-            "{}: {}",
-            tag,
-            match s.as_str() {
+            },
+            Tags::GPSDestLongitudeRef => match s {
                 "E" => "East longitude",
                 "W" => "West longitude",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::GPSDestDistanceRef && count == 2 && s.len() >= 2 {
-        format!(
-            "{}: {}",
-            tag,
-            match s.as_str() {
+            },
+            Tags::GPSDestDistanceRef => match s {
                 "K" => "Kilometers",
                 "M" => "Miles",
                 "N" => "Nautical miles",
                 _ => "reserved",
-            }
-        )
+            },
+            _ => s,
+        }
     } else {
-        format!("{}: {}", tag, s)
+        s
     }
+    .to_string()
 }
 
 pub fn get_short_string_for_tag(tag: Tag, count: usize, values: Vec<u16>) -> String {
-    if tag == Tags::Compression && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            if values[0] == 1 {
-                "uncompressed"
-            } else if values[0] == 6 {
-                "JPEG compression (thumbnails only)"
-            } else {
-                "reserved"
-            }
-        )
-    } else if tag == Tags::PhotometricInterpretation && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            if values[0] == 2 {
-                "RGB"
-            } else if values[0] == 6 {
-                "YCbCr"
-            } else {
-                "reserved"
-            }
-        )
-    } else if tag == Tags::PlanarConfiguration && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            if values[0] == 1 {
-                "chunky format"
-            } else if values[0] == 2 {
-                "planar format"
-            } else {
-                "reserved"
-            }
-        )
-    } else if tag == Tags::YCbCrSubSampling && count == 2 && values.len() == 2 {
-        format!(
-            "{}: {}",
-            tag,
-            if values[0] == 2 && values[1] == 1 {
-                "YCbCr4:2:2"
-            } else if values[0] == 2 && values[1] == 2 {
-                "YCbCr4:2:0"
-            } else {
-                "reserved"
-            }
-        )
-    } else if tag == Tags::YCbCrPositioning && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            if values[0] == 1 {
-                "centered"
-            } else if values[0] == 2 {
-                "co-sited"
-            } else {
-                "reserved"
-            }
-        )
-    } else if tag == Tags::ResolutionUnit && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            if values[0] == 2 {
-                "inches"
-            } else if values[0] == 3 {
-                "centimeters"
-            } else {
-                "reserved"
-            }
-        )
-    } else if tag == Tags::ColorSpace && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            if values[0] == 1 {
-                "sRGB"
-            } else if values[0] == 0xFFFF {
-                "Uncalibrated"
-            } else {
-                "reserved"
-            }
-        )
-    } else if tag == Tags::ExposureProgram && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
-                0 => "Not defined",
-                1 => "Manual",
-                2 => "Normal program",
-                3 => "Aperture priority",
-                4 => "Shutter priority",
-                5 => "Creative program (biased toward depth of field)",
-                6 => "Action program (biased toward fast shutter speed)",
-                7 => "Portrait mode (for closeup photos with the background out of focus)",
-                8 => "Landscape mode (for landscape photos with the background in focus)",
-                _ => "reserved",
-            }
-        )
-    } else if tag == Tags::SensitivityType && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
-                0 => "Unknown",
-                1 => "Standard output sensitivity (SOS)",
-                2 => "Recommended exposure index (REI)",
-                3 => "ISO speed",
-                4 => "Standard output sensitivity (SOS) and recommended exposure index (REI)",
-                5 => "Standard output sensitivity (SOS) and ISO speed",
-                6 => "Recommended exposure index (REI) and ISO speed",
-                7 => "Standard output sensitivity (SOS) and recommended exposure index (REI) and ISO speed",
-                _ => "reserved",
-            }
-        )
-    } else if tag == Tags::MeteringMode && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
-                0 => "unknown",
-                1 => "Average",
-                2 => "CenterWeightedAverage",
-                3 => "Spot",
-                4 => "MultiSpot",
-                5 => "Pattern",
-                6 => "Partial",
-                255 => "other",
-                _ => "reserved",
-            }
-        )
-    } else if tag == Tags::LightSource && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
-                0 => "unknown",
-                1 => "Daylight",
-                2 => "Fluorescent",
-                3 => "Tungsten (incandescent light)",
-                4 => "Flash",
-                9 => "Fine weather",
-                10 => "Cloudy weather",
-                11 => "Shade",
-                12 => "Daylight fluorescent (D 5700 - 7100K)",
-                13 => "Day white fluorescent (N 4600 - 5500K)",
-                14 => "Cool white fluorescent (W 3800 - 4500K)",
-                15 => "White fluorescent (WW 3250 - 3800K)",
-                16 => "Warm white fluorescent (L 2600 - 3250K)",
-                17 => "Standard light A",
-                18 => "Standard light B",
-                19 => "Standard light C",
-                20 => "D55",
-                21 => "D65",
-                22 => "D75",
-                23 => "D50",
-                24 => "ISO studio tungsten",
-                255 => "other light source",
-                _ => "reserved",
-            }
-        )
-    } else if tag == Tags::Flash && count == 1 && values.len() == 1 {
+    if tag == Tags::Flash && count == 1 && values.len() == 1 {
         let v = values[0];
         format!(
-            "{}: {} / {} / {} / {} / {}",
-            tag,
+            "{} / {} / {} / {} / {}",
             if v & (1 << 0) == (1 << 0) {
                 "Flash fired"
             } else {
@@ -683,11 +468,121 @@ pub fn get_short_string_for_tag(tag: Tag, count: usize, values: Vec<u16>) -> Str
                 "No red-eye reduction mode or unknown"
             },
         )
-    } else if tag == Tags::SensingMethod && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+    } else if count == 1 && values.len() == 1 {
+        match tag {
+            Tags::Compression=>
+            if values[0] == 1 {
+                "uncompressed"
+            } else if values[0] == 6 {
+                "JPEG compression (thumbnails only)"
+            } else {
+                "reserved"
+            },
+            Tags::PhotometricInterpretation=>if values[0] == 2 {
+                "RGB"
+            } else if values[0] == 6 {
+                "YCbCr"
+            } else {
+                "reserved"
+            },
+            Tags::PlanarConfiguration=>
+            if values[0] == 1 {
+                "chunky format"
+            } else if values[0] == 2 {
+                "planar format"
+            } else {
+                "reserved"
+            },
+            Tags::YCbCrSubSampling=>if values[0] == 2 && values[1] == 1 {
+                "YCbCr4:2:2"
+            } else if values[0] == 2 && values[1] == 2 {
+                "YCbCr4:2:0"
+            } else {
+                "reserved"
+            },
+            Tags::YCbCrPositioning=>if values[0] == 1 {
+                "centered"
+            } else if values[0] == 2 {
+                "co-sited"
+            } else {
+                "reserved"
+            },
+            Tags::ResolutionUnit=>
+            if values[0] == 2 {
+                "inches"
+            } else if values[0] == 3 {
+                "centimeters"
+            } else {
+                "reserved"
+            },
+            Tags::ColorSpace=>
+            if values[0] == 1 {
+                "sRGB"
+            } else if values[0] == 0xFFFF {
+                "Uncalibrated"
+            } else {
+                "reserved"
+            },
+            Tags::ExposureProgram=>match values[0] {
+                0 => "Not defined",
+                1 => "Manual",
+                2 => "Normal program",
+                3 => "Aperture priority",
+                4 => "Shutter priority",
+                5 => "Creative program (biased toward depth of field)",
+                6 => "Action program (biased toward fast shutter speed)",
+                7 => "Portrait mode (for closeup photos with the background out of focus)",
+                8 => "Landscape mode (for landscape photos with the background in focus)",
+                _ => "reserved",
+            },
+            Tags::SensitivityType=>match values[0] {
+                0 => "Unknown",
+                1 => "Standard output sensitivity (SOS)",
+                2 => "Recommended exposure index (REI)",
+                3 => "ISO speed",
+                4 => "Standard output sensitivity (SOS) and recommended exposure index (REI)",
+                5 => "Standard output sensitivity (SOS) and ISO speed",
+                6 => "Recommended exposure index (REI) and ISO speed",
+                7 => "Standard output sensitivity (SOS) and recommended exposure index (REI) and ISO speed",
+                _ => "reserved",
+            },
+            Tags::MeteringMode=>match values[0] {
+                0 => "unknown",
+                1 => "Average",
+                2 => "CenterWeightedAverage",
+                3 => "Spot",
+                4 => "MultiSpot",
+                5 => "Pattern",
+                6 => "Partial",
+                255 => "other",
+                _ => "reserved",
+            },
+            Tags::LightSource=>match values[0] {
+                0 => "unknown",
+                1 => "Daylight",
+                2 => "Fluorescent",
+                3 => "Tungsten (incandescent light)",
+                4 => "Flash",
+                9 => "Fine weather",
+                10 => "Cloudy weather",
+                11 => "Shade",
+                12 => "Daylight fluorescent (D 5700 - 7100K)",
+                13 => "Day white fluorescent (N 4600 - 5500K)",
+                14 => "Cool white fluorescent (W 3800 - 4500K)",
+                15 => "White fluorescent (WW 3250 - 3800K)",
+                16 => "Warm white fluorescent (L 2600 - 3250K)",
+                17 => "Standard light A",
+                18 => "Standard light B",
+                19 => "Standard light C",
+                20 => "D55",
+                21 => "D65",
+                22 => "D75",
+                23 => "D50",
+                24 => "ISO studio tungsten",
+                255 => "other light source",
+                _ => "reserved",
+            },
+            Tags::SensingMethod=>match values[0] {
                 1 => "Not defined",
                 2 => "One-chip color area sensor",
                 3 => "Two-chip color area sensor",
@@ -696,141 +591,87 @@ pub fn get_short_string_for_tag(tag: Tag, count: usize, values: Vec<u16>) -> Str
                 7 => "Trilinear sensor",
                 8 => "Color sequential linear sensor",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::CustomRendered && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::CustomRendered=>match values[0] {
                 0 => "Normal process",
                 1 => "Custom process",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::ExposureMode && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::ExposureMode=>match values[0] {
                 0 => "Auto exposure",
                 1 => "Manual exposure",
                 2 => "Auto bracket",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::WhiteBalance && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::WhiteBalance=>match values[0] {
                 0 => "Auto white balance",
                 1 => "Manual white balance",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::SceneCaptureType && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::SceneCaptureType=> match values[0] {
                 0 => "Standard",
                 1 => "Landscape",
                 2 => "Portrait",
                 3 => "Night scene",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::GainControl && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::GainControl=>match values[0] {
                 0 => "None",
                 1 => "Low gain up",
                 2 => "High gain up",
                 3 => "Low gain down",
                 4 => "High gain down",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::Contrast && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::Contrast=>match values[0] {
                 0 => "Normal",
                 1 => "Soft",
                 2 => "Hard",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::Saturation && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::Saturation=>match values[0] {
                 0 => "Normal",
                 1 => "Low saturation",
                 2 => "High saturation",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::Sharpness && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::Sharpness=>match values[0] {
                 0 => "Normal",
                 1 => "Soft",
                 2 => "Hard",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::SubjectDistanceRange && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::SubjectDistanceRange=>match values[0] {
                 0 => "unknown",
                 1 => "Macro",
                 2 => "Close view",
                 3 => "Distant view",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::CompositeImage && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::CompositeImage=>match values[0] {
                 0 => "unknown",
                 1 => "non-composite image",
                 2 => "General composite image",
                 3 => "Composite image captured when shooting",
                 _ => "reserved",
-            }
-        )
-    } else if tag == Tags::GPSDifferential && count == 1 && values.len() == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match values[0] {
+            },
+            Tags::GPSDifferential=>match values[0] {
                 0 => "Measurement without differential correction",
                 1 => "Differential correction applied",
                 _ => "reserved",
-            }
-        )
+            },
+            _=>"",
+        }.to_string()
     } else {
-        format!("{}: {}", tag, get_vec_as_string(values))
+        "".to_string()
     }
 }
 
 pub fn get_rational_string_for_tag(tag: Tag, count: usize, values: Vec<(u32, u32)>) -> String {
     if tag == Tags::LensSpecification && count == 4 && values.len() == 4 {
-        format!("{}: {}", tag, "TODO")
+        "TODO".to_string()
     } else {
-        format!("{}: {}", tag, get_tuples_vec_as_string(values))
+        get_tuples_vec_as_string(values)
     }
 }
 
@@ -841,24 +682,17 @@ pub fn get_undefined_string_for_tag(
     cvalue_offset: usize,
     slice: &[u8],
 ) -> String {
-    if tag == Tags::ExifVersion && count == 4 {
-        format!(
-            "{}: {:?}",
-            tag,
-            String::from_iter(value_offset.iter().map(|b| *b as char))
-        )
-    } else if tag == Tags::FlashpixVersion
+    if tag == Tags::FlashpixVersion
         && count == 4
         && value_offset[0] == 48
         && value_offset[1] == 49
         && value_offset[2] == 48
         && value_offset[3] == 48
     {
-        format!("{}: Flashpix Format Version 1.0", tag)
+        "Flashpix Format Version 1.0".to_string()
     } else if tag == Tags::ComponentsConfiguration && count == 4 {
         format!(
-            "{}: {}{}{}",
-            tag,
+            "{}{}{}",
             match value_offset[0] {
                 1 => "Y",
                 2 => "Cb",
@@ -887,43 +721,45 @@ pub fn get_undefined_string_for_tag(
                 _ => "",
             }
         )
-    } else if tag == Tags::OECF {
-        todo!() // TODO:
-    } else if tag == Tags::FileSource && count == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            match value_offset[0] {
+    } else if tag == Tags::MakerNote {
+        let end_off = cvalue_offset + count;
+        if end_off >= slice.len() {
+            "ERROR".to_string()
+        } else {
+            // See https://exiftool.org/makernote_types.html
+            // TODO:
+            "TODO".to_string()
+        }
+    } else if tag == Tags::UserComment {
+        // TODO:
+        "TODO".to_string()
+    } else if count == 1 {
+        match tag {
+            Tags::FileSource => match value_offset[0] {
                 0 => "others",
                 1 => "scanner of transparent type",
                 2 => "scanner of reflex type",
                 3 => "DSC",
                 _ => "reserved",
+            },
+            Tags::SceneType => {
+                if value_offset[0] == 1 {
+                    "A directly photographed image"
+                } else {
+                    "reserved"
+                }
             }
-        )
-    } else if tag == Tags::SceneType && count == 1 {
-        format!(
-            "{}: {}",
-            tag,
-            if value_offset[0] == 1 {
-                "A directly photographed image"
-            } else {
-                "reserved"
-            }
-        )
-    } else if tag == Tags::MakerNote {
-        let end_off = cvalue_offset + count;
-        if end_off >= slice.len() {
-            format!("{}: ERROR", tag)
-        } else {
-            // See https://exiftool.org/makernote_types.html
-            // TODO:
-            format!("{}: TODO", tag)
+            _ => "Undefined",
         }
-    } else if tag == Tags::UserComment {
-        // TODO:
-        format!("{}: TODO", tag)
+        .to_string()
+    } else if count == 4 {
+        match tag {
+            Tags::ExifVersion => String::from_iter(value_offset.iter().map(|b| *b as char)),
+            Tags::OECF => todo!(),
+            _ => "Undefined".to_string(),
+        }
+        .to_string()
     } else {
-        format!("{}: Undefined", tag)
+        "Undefined".to_string()
     }
 }
