@@ -470,8 +470,7 @@ pub fn get_short_string_for_tag(tag: Tag, count: usize, values: Vec<u16>) -> Str
         )
     } else if count == 1 && values.len() == 1 {
         match tag {
-            Tags::Compression=>
-            if values[0] == 1 {
+            Tags::Compression => if values[0] == 1 {
                 "uncompressed"
             } else if values[0] == 6 {
                 "JPEG compression (thumbnails only)"
