@@ -1,10 +1,7 @@
 use core::fmt;
 
 use crate::formats::ImageFormat;
-use crate::tags::{
-    get_ascii_string_for_tag, get_byte_string_for_tag, get_short_string_for_tag,
-    get_undefined_string_for_tag, Tag, Tags,
-};
+use crate::tags::{Tag, Tags};
 
 use crate::arrays::{get_tuples_vec_as_string, get_vec_as_string, index_of_sub_array};
 
@@ -428,23 +425,18 @@ impl InteroperabilityField {
         let tag = Tag(self.ctag);
 
         match self.cdata_type {
-            ExifTypes::Byte => get_byte_string_for_tag(tag, self.ccount, self.get_bytes(slice)),
-            ExifTypes::Ascii => {
-                get_ascii_string_for_tag(tag, self.ccount, self.get_ascii(slice).as_str())
-            }
+            ExifTypes::Byte => tag.get_byte_string(self.ccount, self.get_bytes(slice)),
+            // ExifTypes::Byte => get_byte_string_for_tag(tag, self.ccount, self.get_bytes(slice)),
+            ExifTypes::Ascii => tag.get_ascii_string(self.ccount, self.get_ascii(slice).as_str()),
             ExifTypes::Short => {
                 let values = self.get_shorts(slice);
-                get_short_string_for_tag(tag, self.ccount, values)
+                tag.get_short_string(self.ccount, values)
             }
             ExifTypes::Long => get_vec_as_string(self.get_longs(slice)),
             ExifTypes::Rational => get_tuples_vec_as_string(self.get_rationals(slice)),
-            ExifTypes::Undefined => get_undefined_string_for_tag(
-                tag,
-                self.ccount,
-                self.value_offset,
-                self.cvalue_offset,
-                slice,
-            ),
+            ExifTypes::Undefined => {
+                tag.get_undefined_string(self.ccount, self.value_offset, self.cvalue_offset, slice)
+            }
             ExifTypes::Slong => get_vec_as_string(self.get_slongs(slice)),
             ExifTypes::Srational => get_tuples_vec_as_string(self.get_srational(slice)),
             ExifTypes::Error => String::from("N/A"),

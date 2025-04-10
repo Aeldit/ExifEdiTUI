@@ -351,125 +351,132 @@ impl fmt::Display for Tag {
     }
 }
 
-pub fn get_byte_string_for_tag(tag: Tag, count: usize, values: Vec<u8>) -> String {
-    if tag == Tags::GPSVersionID && count == 4 && values.len() == 4 {
-        if values[0] == 2 && values[1] == 3 && values[2] == 0 && values[3] == 0 {
-            "Version 2.3"
-        } else {
-            "reserved"
-        }
-        .to_string()
-    } else if tag == Tags::GPSAltitudeRef && count == 1 && values.len() == 1 {
-        match values[0] {
-            0 => "Sea level",
-            1 => "Sea level reference (negative value)",
-            _ => "reserved",
-        }
-        .to_string()
-    } else {
-        get_vec_as_string(values)
-    }
-}
+impl Tag {
+    pub fn get_byte_string(self, count: usize, values: Vec<u8>) -> String {
+        let tag = self;
 
-pub fn get_ascii_string_for_tag(tag: Tag, count: usize, s: &str) -> String {
-    if count == 2 && s.len() >= 2 {
-        match tag {
-            Tags::GPSLatitudeRef => match s {
-                "N" => "North latitude",
-                "S" => "South latitude",
-                _ => "reserved",
-            },
-            Tags::GPSLongitudeRef => match s {
-                "E" => "East longitude",
-                "W" => "West longitude",
-                _ => "reserved",
-            },
-            Tags::GPSStatus => match s {
-                "A" => "Measurement in progress",
-                "V" => "Measurement interrupted",
-                _ => "reserved",
-            },
-            Tags::GPSMeasureMode => match s {
-                "2" => "2-dimensional measurement",
-                "3" => "3-dimensional measurement",
-                _ => "reserved",
-            },
-            Tags::GPSSpeedRef => match s {
-                "K" => "Kilometers per hour",
-                "M" => "Miles per hour",
-                "N" => "Knots",
-                _ => "reserved",
-            },
-            Tags::GPSTrackRef | Tags::GPSImgDirectionRef | Tags::GPSDestBearingRef => match s {
-                "T" => "True direction",
-                "M" => "Magnetic direction",
-                _ => "reserved",
-            },
-            Tags::GPSDestLatitudeRef => match s {
-                "N" => "North latitude",
-                "S" => "South latitude",
-                _ => "reserved",
-            },
-            Tags::GPSDestLongitudeRef => match s {
-                "E" => "East longitude",
-                "W" => "West longitude",
-                _ => "reserved",
-            },
-            Tags::GPSDestDistanceRef => match s {
-                "K" => "Kilometers",
-                "M" => "Miles",
-                "N" => "Nautical miles",
-                _ => "reserved",
-            },
-            _ => s,
-        }
-    } else {
-        s
-    }
-    .to_string()
-}
-
-pub fn get_short_string_for_tag(tag: Tag, count: usize, values: Vec<u16>) -> String {
-    if tag == Tags::Flash && count == 1 && values.len() == 1 {
-        let v = values[0];
-        format!(
-            "{} / {} / {} / {} / {}",
-            if v & (1 << 0) == (1 << 0) {
-                "Flash fired"
+        if tag == Tags::GPSVersionID && count == 4 && values.len() == 4 {
+            if values[0] == 2 && values[1] == 3 && values[2] == 0 && values[3] == 0 {
+                "Version 2.3"
             } else {
-                "Flash did not fire"
-            },
-            if v & 2 == 0 && v & 3 == 0 {
-                "No strobe return detection function"
-            } else if v & (1 << 1) == 0 && v & (1 << 2) == (1 << 2) {
                 "reserved"
-            } else if v & (1 << 1) == (1 << 1) && v & (1 << 2) == 0 {
-                "Strobe return light not detected"
-            } else {
-                "Strobe return light detected"
-            },
-            if v & (1 << 3) == 0 && v & (1 << 4) == 0 {
-                "unknown"
-            } else if v & (1 << 3) == 0 && v & (1 << 4) == (1 << 4) {
-                "Compulsory flash firing"
-            } else if v & (1 << 3) == (1 << 3) && v & (1 << 4) == 0 {
-                "Compulsory flash suppression"
-            } else {
-                "Auto mode"
-            },
-            if v & (1 << 5) == (1 << 5) {
-                "No flash function"
-            } else {
-                "Flash function present"
-            },
-            if v & (1 << 6) == (1 << 6) {
-                "Red-eye reduction supported"
-            } else {
-                "No red-eye reduction mode or unknown"
-            },
-        )
-    } else if count == 1 && values.len() == 1 {
-        match tag {
+            }
+            .to_string()
+        } else if tag == Tags::GPSAltitudeRef && count == 1 && values.len() == 1 {
+            match values[0] {
+                0 => "Sea level",
+                1 => "Sea level reference (negative value)",
+                _ => "reserved",
+            }
+            .to_string()
+        } else {
+            get_vec_as_string(values)
+        }
+    }
+
+    pub fn get_ascii_string(self, count: usize, s: &str) -> String {
+        let tag = self;
+
+        if count == 2 && s.len() >= 2 {
+            match tag {
+                Tags::GPSLatitudeRef => match s {
+                    "N" => "North latitude",
+                    "S" => "South latitude",
+                    _ => "reserved",
+                },
+                Tags::GPSLongitudeRef => match s {
+                    "E" => "East longitude",
+                    "W" => "West longitude",
+                    _ => "reserved",
+                },
+                Tags::GPSStatus => match s {
+                    "A" => "Measurement in progress",
+                    "V" => "Measurement interrupted",
+                    _ => "reserved",
+                },
+                Tags::GPSMeasureMode => match s {
+                    "2" => "2-dimensional measurement",
+                    "3" => "3-dimensional measurement",
+                    _ => "reserved",
+                },
+                Tags::GPSSpeedRef => match s {
+                    "K" => "Kilometers per hour",
+                    "M" => "Miles per hour",
+                    "N" => "Knots",
+                    _ => "reserved",
+                },
+                Tags::GPSTrackRef | Tags::GPSImgDirectionRef | Tags::GPSDestBearingRef => match s {
+                    "T" => "True direction",
+                    "M" => "Magnetic direction",
+                    _ => "reserved",
+                },
+                Tags::GPSDestLatitudeRef => match s {
+                    "N" => "North latitude",
+                    "S" => "South latitude",
+                    _ => "reserved",
+                },
+                Tags::GPSDestLongitudeRef => match s {
+                    "E" => "East longitude",
+                    "W" => "West longitude",
+                    _ => "reserved",
+                },
+                Tags::GPSDestDistanceRef => match s {
+                    "K" => "Kilometers",
+                    "M" => "Miles",
+                    "N" => "Nautical miles",
+                    _ => "reserved",
+                },
+                _ => s,
+            }
+        } else {
+            s
+        }
+        .to_string()
+    }
+
+    pub fn get_short_string(self, count: usize, values: Vec<u16>) -> String {
+        let tag = self;
+
+        if tag == Tags::Flash && count == 1 && values.len() == 1 {
+            let v = values[0];
+            format!(
+                "{} / {} / {} / {} / {}",
+                if v & (1 << 0) == (1 << 0) {
+                    "Flash fired"
+                } else {
+                    "Flash did not fire"
+                },
+                if v & 2 == 0 && v & 3 == 0 {
+                    "No strobe return detection function"
+                } else if v & (1 << 1) == 0 && v & (1 << 2) == (1 << 2) {
+                    "reserved"
+                } else if v & (1 << 1) == (1 << 1) && v & (1 << 2) == 0 {
+                    "Strobe return light not detected"
+                } else {
+                    "Strobe return light detected"
+                },
+                if v & (1 << 3) == 0 && v & (1 << 4) == 0 {
+                    "unknown"
+                } else if v & (1 << 3) == 0 && v & (1 << 4) == (1 << 4) {
+                    "Compulsory flash firing"
+                } else if v & (1 << 3) == (1 << 3) && v & (1 << 4) == 0 {
+                    "Compulsory flash suppression"
+                } else {
+                    "Auto mode"
+                },
+                if v & (1 << 5) == (1 << 5) {
+                    "No flash function"
+                } else {
+                    "Flash function present"
+                },
+                if v & (1 << 6) == (1 << 6) {
+                    "Red-eye reduction supported"
+                } else {
+                    "No red-eye reduction mode or unknown"
+                },
+            )
+        } else if count == 1 && values.len() == 1 {
+            match tag {
             Tags::Compression => if values[0] == 1 {
                 "uncompressed"
             } else if values[0] == 6 {
@@ -661,104 +668,109 @@ pub fn get_short_string_for_tag(tag: Tag, count: usize, values: Vec<u16>) -> Str
             },
             _=>"",
         }.to_string()
-    } else {
-        "".to_string()
-    }
-}
-
-pub fn get_rational_string_for_tag(tag: Tag, count: usize, values: Vec<(u32, u32)>) -> String {
-    if tag == Tags::LensSpecification && count == 4 && values.len() == 4 {
-        "TODO".to_string()
-    } else {
-        get_tuples_vec_as_string(values)
-    }
-}
-
-pub fn get_undefined_string_for_tag(
-    tag: Tag,
-    count: usize,
-    value_offset: [u8; 4],
-    cvalue_offset: usize,
-    slice: &[u8],
-) -> String {
-    if tag == Tags::FlashpixVersion
-        && count == 4
-        && value_offset[0] == 48
-        && value_offset[1] == 49
-        && value_offset[2] == 48
-        && value_offset[3] == 48
-    {
-        "Flashpix Format Version 1.0".to_string()
-    } else if tag == Tags::ComponentsConfiguration && count == 4 {
-        format!(
-            "{}{}{}",
-            match value_offset[0] {
-                1 => "Y",
-                2 => "Cb",
-                3 => "Cr",
-                4 => "R",
-                5 => "G",
-                6 => "B",
-                _ => "",
-            },
-            match value_offset[1] {
-                1 => "Y",
-                2 => "Cb",
-                3 => "Cr",
-                4 => "R",
-                5 => "G",
-                6 => "B",
-                _ => "",
-            },
-            match value_offset[2] {
-                1 => "Y",
-                2 => "Cb",
-                3 => "Cr",
-                4 => "R",
-                5 => "G",
-                6 => "B",
-                _ => "",
-            }
-        )
-    } else if tag == Tags::MakerNote {
-        let end_off = cvalue_offset + count;
-        if end_off >= slice.len() {
-            "ERROR".to_string()
         } else {
-            // See https://exiftool.org/makernote_types.html
+            "".to_string()
+        }
+    }
+
+    pub fn get_rational_string(self, count: usize, values: Vec<(u32, u32)>) -> String {
+        let tag = self;
+
+        if tag == Tags::LensSpecification && count == 4 && values.len() == 4 {
+            "TODO".to_string()
+        } else {
+            get_tuples_vec_as_string(values)
+        }
+    }
+
+    pub fn get_undefined_string(
+        self,
+        count: usize,
+        value_offset: [u8; 4],
+        cvalue_offset: usize,
+        slice: &[u8],
+    ) -> String {
+        let tag = self;
+
+        if tag == Tags::FlashpixVersion
+            && count == 4
+            && value_offset[0] == 48
+            && value_offset[1] == 49
+            && value_offset[2] == 48
+            && value_offset[3] == 48
+        {
+            "Flashpix Format Version 1.0".to_string()
+        } else if tag == Tags::ComponentsConfiguration && count == 4 {
+            format!(
+                "{}{}{}",
+                match value_offset[0] {
+                    1 => "Y",
+                    2 => "Cb",
+                    3 => "Cr",
+                    4 => "R",
+                    5 => "G",
+                    6 => "B",
+                    _ => "",
+                },
+                match value_offset[1] {
+                    1 => "Y",
+                    2 => "Cb",
+                    3 => "Cr",
+                    4 => "R",
+                    5 => "G",
+                    6 => "B",
+                    _ => "",
+                },
+                match value_offset[2] {
+                    1 => "Y",
+                    2 => "Cb",
+                    3 => "Cr",
+                    4 => "R",
+                    5 => "G",
+                    6 => "B",
+                    _ => "",
+                }
+            )
+        } else if tag == Tags::MakerNote {
+            let end_off = cvalue_offset + count;
+            if end_off >= slice.len() {
+                "ERROR".to_string()
+            } else {
+                // See https://exiftool.org/makernote_types.html
+                // TODO:
+                "TODO".to_string()
+            }
+        } else if tag == Tags::UserComment {
             // TODO:
             "TODO".to_string()
-        }
-    } else if tag == Tags::UserComment {
-        // TODO:
-        "TODO".to_string()
-    } else if count == 1 {
-        match tag {
-            Tags::FileSource => match value_offset[0] {
-                0 => "others",
-                1 => "scanner of transparent type",
-                2 => "scanner of reflex type",
-                3 => "DSC",
-                _ => "reserved",
-            },
-            Tags::SceneType => {
-                if value_offset[0] == 1 {
-                    "A directly photographed image"
-                } else {
-                    "reserved"
+        } else if count == 1 {
+            match tag {
+                Tags::FileSource => match value_offset[0] {
+                    0 => "others",
+                    1 => "scanner of transparent type",
+                    2 => "scanner of reflex type",
+                    3 => "DSC",
+                    _ => "reserved",
+                },
+                Tags::SceneType => {
+                    if value_offset[0] == 1 {
+                        "A directly photographed image"
+                    } else {
+                        "reserved"
+                    }
                 }
+                _ => "Undefined",
             }
-            _ => "Undefined",
+            .to_string()
+        } else if count == 4 {
+            match tag {
+                Tags::ExifVersion => String::from_iter(value_offset.iter().map(|b| *b as char)),
+                Tags::OECF => todo!(),
+                _ => "Undefined".to_string(),
+            }
+            .to_string()
+        } else {
+            "Undefined".to_string()
         }
-        .to_string()
-    } else if count == 4 {
-        match tag {
-            Tags::ExifVersion => String::from_iter(value_offset.iter().map(|b| *b as char)),
-            Tags::OECF => todo!(),
-            _ => "Undefined".to_string(),
-        }
-        .to_string()
-    } else {
-        "Undefined".to_string()
     }
 }
